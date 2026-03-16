@@ -1,5 +1,6 @@
 import { File } from 'formidable';
 import { readFile } from 'node:fs/promises';
+import { StoryblokPromptSchemaContext } from './storyblokPromptSchema';
 
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 const OPENAI_TIMEOUT_MS = 25000;
@@ -21,6 +22,7 @@ type OpenAIChatResponse = {
 export const generateStoryContentFromImage = async (params: {
 	image: File;
 	prompt: string;
+	schemaContext?: StoryblokPromptSchemaContext;
 }): Promise<Record<string, unknown>> => {
 	const apiKey = process.env.OPENAI_API_KEY;
 	if (!apiKey) {
@@ -38,7 +40,7 @@ export const generateStoryContentFromImage = async (params: {
 		messages: [
 			{
 				role: 'system',
-				content: buildSystemPrompt(),
+				content: buildSystemPrompt(params.schemaContext),
 			},
 			{
 				role: 'user',
@@ -47,7 +49,7 @@ export const generateStoryContentFromImage = async (params: {
 						type: 'text',
 						text: [
 							'Use the screenshot and user prompt to generate Storyblok content JSON.',
-							'Include only these components: page, grid, accordion, accordionItem, teaser, feature.',
+							buildUserComponentHint(params.schemaContext),
 							'Never include folder placement metadata in output.',
 							`User prompt: ${params.prompt}`,
 						].join('\n'),
@@ -113,18 +115,71 @@ const unwrapJsonCodeFence = (value: string) => {
 	return withoutStart.join('\n').trim();
 };
 
-const buildSystemPrompt = () => {
-	return [
+const buildSystemPrompt = (schemaContext?: StoryblokPromptSchemaContext) => {
+	const baseRules = [
 		'You generate Storyblok story content JSON.',
 		'Output a single JSON object only. No markdown and no explanations.',
 		'The root object must be a page component.',
 		'Every block must include component and _uid.',
+	];
+
+	if (!schemaContext || schemaContext.components.length === 0) {
+		return [
+			...baseRules,
 		'Allowed components: page, grid, accordion, accordionItem, teaser, feature.',
 		'Accordion rules: accordionItem is required, must be an array, and each item must be component accordionItem.',
 		'page.body and grid.columns may contain arrays of allowed components.',
 		'Field types: teaser.headline string, feature.name string, accordionItem.titel string.',
 		'accordionItem.content, when provided, must be Storyblok richtext JSON object with type/content nodes.',
+		].join('\n');
+	}
+
+	const rootComponent = schemaContext.rootComponents.includes('page')
+		? 'page'
+		: schemaContext.rootComponents[0] || 'page';
+
+	const schemaLines = schemaContext.components.map((component) => {
+		const fieldSummary =
+			component.fields.length === 0
+				? 'no fields'
+				: component.fields
+						.map((field) => {
+							const tokens = [field.name, `(${field.type}${field.required ? ', required' : ''})`];
+							if (field.options && field.options.length > 0) {
+								tokens.push(`options: ${field.options.join('|')}`);
+							}
+							if (field.allowedComponents && field.allowedComponents.length > 0) {
+								tokens.push(`children: ${field.allowedComponents.join('|')}`);
+							}
+							if (typeof field.minimum === 'number') {
+								tokens.push(`min: ${field.minimum}`);
+							}
+							if (typeof field.maximum === 'number') {
+								tokens.push(`max: ${field.maximum}`);
+							}
+							return tokens.join(' ');
+						})
+						.join('; ');
+
+		return `${component.name}${component.isRoot ? ' (root)' : ''}: ${fieldSummary}`;
+	});
+
+	return [
+		...baseRules,
+		`Root component must be ${rootComponent}.`,
+		`Allowed components: ${schemaContext.allowedComponents.join(', ')}.`,
+		'Schema summary follows. Respect field types, required flags, options, and allowed nested components:',
+		...schemaLines,
+		'For any richtext field, output a valid Storyblok richtext JSON object with type/content nodes.',
 	].join('\n');
+};
+
+const buildUserComponentHint = (schemaContext?: StoryblokPromptSchemaContext) => {
+	if (!schemaContext || schemaContext.allowedComponents.length === 0) {
+		return 'Include only these components: page, grid, accordion, accordionItem, teaser, feature.';
+	}
+
+	return `Include only these components: ${schemaContext.allowedComponents.join(', ')}.`;
 };
 
 const postOpenAiWithRetry = async (params: {

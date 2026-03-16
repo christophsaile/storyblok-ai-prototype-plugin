@@ -1,6 +1,8 @@
 import {
     generateStoryContentFromImage,
     getAppSession,
+    StoryblokPromptSchemaContext,
+    toPromptSchemaContext,
     validateGeneratedStoryContent,
     verifyAppBridgeHeader,
 } from '@/utils/server';
@@ -175,10 +177,32 @@ export default async function handler(
 			});
 	}
 
+	const spaceId = verified.result?.space_id;
+	if (!spaceId) {
+		return res.status(500).json({
+			ok: false,
+			requestId,
+			code: 'internal_error',
+			error: 'Missing space id in app bridge session.',
+		});
+	}
+
+	const schemaContextResult = await fetchPromptSchemaContext({
+		spaceId,
+		accessToken: appSession.accessToken,
+	});
+
+	if (schemaContextResult.error) {
+		console.warn(
+			`[generate-story:${requestId}] Failed to load Storyblok component schema: ${schemaContextResult.error}`,
+		);
+	}
+
 	const candidateContent = await parseCandidateContent({
 		generatedContentJson,
 		prompt,
 		image,
+		schemaContext: schemaContextResult.schemaContext,
 	});
 	if (!candidateContent.ok) {
 		return res.status(candidateContent.status).json({
@@ -189,7 +213,9 @@ export default async function handler(
 		});
 	}
 
-	const validation = validateGeneratedStoryContent(candidateContent.value);
+	const validation = validateGeneratedStoryContent(candidateContent.value, {
+		allowedComponents: schemaContextResult.schemaContext?.allowedComponents,
+	});
 	if (!validation.ok) {
 		return res.status(422).json({
 			ok: false,
@@ -197,16 +223,6 @@ export default async function handler(
 			code: 'validation_error',
 			error: 'Generated content failed Storyblok schema validation.',
 			validationErrors: validation.errors,
-		});
-	}
-
-	const spaceId = verified.result?.space_id;
-	if (!spaceId) {
-		return res.status(500).json({
-			ok: false,
-			requestId,
-			code: 'internal_error',
-			error: 'Missing space id in app bridge session.',
 		});
 	}
 
@@ -291,6 +307,10 @@ type StoryblokListStoriesResponse = {
 type StoryblokCreateStoryResponse = {
 	story?: StoryblokStory;
 	error?: string;
+};
+
+type StoryblokListComponentsResponse = {
+	components?: unknown[];
 };
 
 const resolveFolderId = async (params: {
@@ -526,6 +546,7 @@ const parseCandidateContent = async (params: {
 	generatedContentJson: string;
 	prompt: string;
 	image: File;
+	schemaContext?: StoryblokPromptSchemaContext;
 }): Promise<
 	| { ok: true; value: Record<string, unknown> }
 	| { ok: false; status: 422 | 500; error: string }
@@ -558,6 +579,7 @@ const parseCandidateContent = async (params: {
 		const generated = await generateStoryContentFromImage({
 			image: params.image,
 			prompt: params.prompt,
+			schemaContext: params.schemaContext,
 		});
 		return { ok: true, value: generated };
 	} catch (error) {
@@ -566,6 +588,45 @@ const parseCandidateContent = async (params: {
 			ok: false,
 			status: 500,
 			error: message,
+		};
+	}
+};
+
+const fetchPromptSchemaContext = async (params: {
+	spaceId: number;
+	accessToken: string;
+}): Promise<{ schemaContext?: StoryblokPromptSchemaContext; error?: string }> => {
+	try {
+		const url = new URL(
+			`https://mapi.storyblok.com/v1/spaces/${params.spaceId}/components`,
+		);
+		url.searchParams.set('per_page', '100');
+
+		const response = await fetchStoryblokWithRetry({
+			url: url.toString(),
+			accessToken: params.accessToken,
+			method: 'GET',
+		});
+
+		if (!response.ok) {
+			return {
+				error: `Storyblok returned ${response.status}.`,
+			};
+		}
+
+		const data = (await response.json()) as StoryblokListComponentsResponse;
+		const schemaContext = toPromptSchemaContext(data);
+
+		if (!schemaContext) {
+			return {
+				error: 'Components payload could not be transformed.',
+			};
+		}
+
+		return { schemaContext };
+	} catch (error) {
+		return {
+			error: error instanceof Error ? error.message : 'Unknown schema fetch error.',
 		};
 	}
 };

@@ -26,8 +26,10 @@ export type ValidationResult =
 
 export const validateGeneratedStoryContent = (
 	input: unknown,
+	options?: { allowedComponents?: string[] },
 ): ValidationResult => {
 	const errors: ValidationIssue[] = [];
+	const allowedComponents = buildAllowedComponentsSet(options?.allowedComponents);
 
 	if (!isPlainObject(input)) {
 		return {
@@ -36,7 +38,9 @@ export const validateGeneratedStoryContent = (
 		};
 	}
 
-	validateBlock(input, 'content', errors, 0, { expectedComponent: 'page' });
+	validateBlock(input, 'content', errors, 0, allowedComponents, {
+		expectedComponent: 'page',
+	});
 
 	if (errors.length > 0) {
 		return { ok: false, errors };
@@ -50,6 +54,7 @@ const validateBlock = (
 	path: string,
 	errors: ValidationIssue[],
 	depth: number,
+	allowedComponents: Set<string>,
 	options?: { expectedComponent?: string },
 ) => {
 	if (depth > MAX_DEPTH) {
@@ -70,7 +75,7 @@ const validateBlock = (
 		return;
 	}
 
-	if (!ALLOWED_COMPONENTS.has(component)) {
+	if (!allowedComponents.has(component)) {
 		errors.push({
 			path: `${path}.component`,
 			message: `Unsupported component \"${component}\".`,
@@ -91,13 +96,25 @@ const validateBlock = (
 
 	switch (component) {
 		case 'page':
-			validateBlockArray(value.body, `${path}.body`, errors, depth + 1);
+			validateBlockArray(value.body, `${path}.body`, errors, depth + 1, allowedComponents);
 			return;
 		case 'grid':
-			validateBlockArray(value.columns, `${path}.columns`, errors, depth + 1);
+			validateBlockArray(
+				value.columns,
+				`${path}.columns`,
+				errors,
+				depth + 1,
+				allowedComponents,
+			);
 			return;
 		case 'accordion':
-			validateAccordionItems(value.accordionItem, `${path}.accordionItem`, errors, depth + 1);
+			validateAccordionItems(
+				value.accordionItem,
+				`${path}.accordionItem`,
+				errors,
+				depth + 1,
+				allowedComponents,
+			);
 			return;
 		case 'accordionItem':
 			validateAccordionItem(value, path, errors, depth + 1);
@@ -131,6 +148,7 @@ const validateBlockArray = (
 	path: string,
 	errors: ValidationIssue[],
 	depth: number,
+	allowedComponents: Set<string>,
 ) => {
 	if (value === undefined) {
 		return;
@@ -142,7 +160,7 @@ const validateBlockArray = (
 	}
 
 	value.forEach((item, index) => {
-		validateBlock(item, `${path}[${index}]`, errors, depth);
+		validateBlock(item, `${path}[${index}]`, errors, depth, allowedComponents);
 	});
 };
 
@@ -151,6 +169,7 @@ const validateAccordionItems = (
 	path: string,
 	errors: ValidationIssue[],
 	depth: number,
+	allowedComponents: Set<string>,
 ) => {
 	if (!Array.isArray(value)) {
 		errors.push({
@@ -168,10 +187,27 @@ const validateAccordionItems = (
 	}
 
 	value.forEach((item, index) => {
-		validateBlock(item, `${path}[${index}]`, errors, depth, {
+		validateBlock(item, `${path}[${index}]`, errors, depth, allowedComponents, {
 			expectedComponent: 'accordionItem',
 		});
 	});
+};
+
+const buildAllowedComponentsSet = (allowedComponents?: string[]) => {
+	if (!Array.isArray(allowedComponents) || allowedComponents.length === 0) {
+		return ALLOWED_COMPONENTS;
+	}
+
+	const normalized = allowedComponents.filter(
+		(component): component is string =>
+			typeof component === 'string' && component.trim().length > 0,
+	);
+
+	if (normalized.length === 0) {
+		return ALLOWED_COMPONENTS;
+	}
+
+	return new Set(normalized);
 };
 
 const validateAccordionItem = (
