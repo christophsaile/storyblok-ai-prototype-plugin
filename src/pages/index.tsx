@@ -2,6 +2,7 @@ import Head from 'next/head';
 import { useAppBridge } from '@/hooks';
 import UserInfo from '@/components/UserInfo';
 import Example from '@/components/Example';
+import StoryGenerationForm from '@/components/StoryGenerationForm';
 
 type User = {
 	id: number;
@@ -26,6 +27,7 @@ export default function Home() {
 				{completed && (
 					<div>
 						<p>Authenticated!</p>
+						<StoryGenerationForm />
 						<UserInfo />
 						<Example />
 					</div>
