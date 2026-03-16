@@ -1,4 +1,4 @@
-# Storyblok Space Starter x Next.js
+# Storyblok Space Starter x Next.js test
 
 This is a starter template for Storyblok Space Plugins, created with Next.js (Pages Router) and [@storyblok/app-extension-auth](https://github.com/storyblok/app-extension-auth).
 
