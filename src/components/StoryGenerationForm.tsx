@@ -12,8 +12,22 @@ type ValidationErrors = {
 
 type GenerateResponse = {
 	ok: boolean;
+	requestId?: string;
+	code?: string;
 	message?: string;
 	error?: string;
+	validationErrors?: {
+		path: string;
+		message: string;
+	}[];
+	story?: {
+		id: number;
+		name: string;
+		slug: string;
+		fullSlug?: string;
+		editorUrl: string;
+		parentId: number;
+	};
 	input?: {
 		fileName: string;
 		mimeType: string;
@@ -43,6 +57,7 @@ export default function StoryGenerationForm() {
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [result, setResult] = useState<GenerateResponse | null>(null);
 	const [requestError, setRequestError] = useState<string | null>(null);
+	const [responseMeta, setResponseMeta] = useState<string | null>(null);
 
 	const formReady = useMemo(() => {
 		return Boolean(image) && prompt.trim().length > 0 && folder.trim().length > 0;
@@ -74,6 +89,7 @@ export default function StoryGenerationForm() {
 		event.preventDefault();
 		setRequestError(null);
 		setResult(null);
+		setResponseMeta(null);
 
 		const nextErrors = validate();
 		setErrors(nextErrors);
@@ -102,8 +118,18 @@ export default function StoryGenerationForm() {
 			});
 
 			const json = (await response.json()) as GenerateResponse;
+			setResponseMeta(
+				json.requestId
+					? `Request id: ${json.requestId}${json.code ? `, code: ${json.code}` : ''}`
+					: null,
+			);
 			if (!response.ok) {
-				setRequestError(json.error || 'Failed to generate story.');
+				const detail =
+					json.validationErrors && json.validationErrors.length > 0
+						? ` (${json.validationErrors.length} validation issue(s))`
+						: '';
+				setRequestError((json.error || 'Failed to generate story.') + detail);
+				setResult(json);
 				return;
 			}
 
@@ -193,6 +219,32 @@ export default function StoryGenerationForm() {
 			</form>
 
 			{requestError && <p>{requestError}</p>}
+			{responseMeta && <p>{responseMeta}</p>}
+			{result?.validationErrors && result.validationErrors.length > 0 && (
+				<div>
+					<p>Validation errors:</p>
+					<ul>
+						{result.validationErrors.map((issue) => (
+							<li key={`${issue.path}:${issue.message}`}>
+								{issue.path}: {issue.message}
+							</li>
+						))}
+					</ul>
+				</div>
+			)}
+			{result?.story && (
+				<div>
+					<p>
+						Created draft story {result.story.name} (#{result.story.id}) in folder{' '}
+						{result.story.parentId}.
+					</p>
+					<p>
+						<a href={result.story.editorUrl} target="_blank" rel="noreferrer">
+							Open in Storyblok editor
+						</a>
+					</p>
+				</div>
+			)}
 			{result && <pre>{JSON.stringify(result, null, 2)}</pre>}
 		</section>
 	);
