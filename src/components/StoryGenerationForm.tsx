@@ -6,6 +6,7 @@ const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
 
 type ValidationErrors = {
 	image?: string;
+	storyName?: string;
 	prompt?: string;
 	folder?: string;
 };
@@ -30,6 +31,7 @@ type GenerateResponse = {
 	};
 	input?: {
 		fileName: string;
+		storyName: string;
 		mimeType: string;
 		size: number;
 		promptLength: number;
@@ -50,6 +52,7 @@ const isValidImage = (file: File | null) => {
 
 export default function StoryGenerationForm() {
 	const [image, setImage] = useState<File | null>(null);
+	const [storyName, setStoryName] = useState('');
 	const [prompt, setPrompt] = useState('');
 	const [folder, setFolder] = useState('');
 	const [generatedContentJson, setGeneratedContentJson] = useState('');
@@ -60,8 +63,13 @@ export default function StoryGenerationForm() {
 	const [responseMeta, setResponseMeta] = useState<string | null>(null);
 
 	const formReady = useMemo(() => {
-		return Boolean(image) && prompt.trim().length > 0 && folder.trim().length > 0;
-	}, [image, prompt, folder]);
+		return (
+			Boolean(image) &&
+			storyName.trim().length > 0 &&
+			prompt.trim().length > 0 &&
+			folder.trim().length > 0
+		);
+	}, [image, storyName, prompt, folder]);
 
 	const validate = (): ValidationErrors => {
 		const nextErrors: ValidationErrors = {};
@@ -78,8 +86,12 @@ export default function StoryGenerationForm() {
 			nextErrors.prompt = 'Please provide a generation prompt.';
 		}
 
+		if (!storyName.trim()) {
+			nextErrors.storyName = 'Please provide a story name.';
+		}
+
 		if (!folder.trim()) {
-			nextErrors.folder = 'Please provide a target folder id or path.';
+			nextErrors.folder = 'Please provide a target folder name, id, or path.';
 		}
 
 		return nextErrors;
@@ -102,6 +114,7 @@ export default function StoryGenerationForm() {
 		try {
 			const data = new FormData();
 			data.append('image', image);
+			data.append('storyName', storyName.trim());
 			data.append('prompt', prompt.trim());
 			data.append('targetFolder', folder.trim());
 			if (generatedContentJson.trim()) {
@@ -150,6 +163,21 @@ export default function StoryGenerationForm() {
 			</p>
 			<form onSubmit={onSubmit}>
 				<div>
+					<label htmlFor="storyName">Story Name</label>
+					<input
+						id="storyName"
+						type="text"
+						placeholder="Example: Spring Campaign Landing Page"
+						value={storyName}
+						onChange={(event) => {
+							setStoryName(event.target.value);
+							setErrors((prev) => ({ ...prev, storyName: undefined }));
+						}}
+					/>
+					{errors.storyName && <p>{errors.storyName}</p>}
+				</div>
+
+				<div>
 					<label htmlFor="screenshot">Screenshot</label>
 					<input
 						id="screenshot"
@@ -184,11 +212,11 @@ export default function StoryGenerationForm() {
 				</div>
 
 				<div>
-					<label htmlFor="folder">Target Folder</label>
+					<label htmlFor="folder">Target Folder (name, path, or id)</label>
 					<input
 						id="folder"
 						type="text"
-						placeholder="Example: 123456 or ai-generated"
+						placeholder="Example: Homepage, ai-generated, or 123456"
 						value={folder}
 						onChange={(event) => {
 							setFolder(event.target.value);

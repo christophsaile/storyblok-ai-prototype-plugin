@@ -27,6 +27,7 @@ type GenerateSuccessResponse = {
 	};
 	input: {
 		fileName: string;
+		storyName: string;
 		mimeType: string;
 		size: number;
 		promptLength: number;
@@ -111,6 +112,7 @@ export default async function handler(
 	}
 
 	const image = getSingleFile(files.image);
+	const storyName = getSingleField(fields.storyName);
 	const prompt = getSingleField(fields.prompt);
 	const targetFolder = getSingleField(fields.targetFolder);
 	const generatedContentJson = getSingleField(fields.generatedContentJson);
@@ -153,6 +155,15 @@ export default async function handler(
 		});
 	}
 
+	if (!storyName.trim()) {
+		return res.status(422).json({
+			ok: false,
+			requestId,
+			code: 'validation_error',
+			error: 'Story name is required.',
+		});
+	}
+
 	if (!targetFolder.trim()) {
 		return res
 			.status(422)
@@ -160,7 +171,7 @@ export default async function handler(
 				ok: false,
 				requestId,
 				code: 'validation_error',
-				error: 'Target folder is required.',
+				error: 'Target folder name, id, or path is required.',
 			});
 	}
 
@@ -214,8 +225,8 @@ export default async function handler(
 		});
 	}
 
-	const draftName = buildStoryName(prompt);
-	const draftSlug = buildStorySlug(prompt);
+	const draftName = buildStoryName(storyName, prompt);
+	const draftSlug = buildStorySlug(draftName);
 
 	const createResult = await createDraftStory({
 		spaceId,
@@ -250,6 +261,7 @@ export default async function handler(
 		},
 		input: {
 			fileName: image.originalFilename || 'uploaded-image',
+			storyName: draftName,
 			mimeType: image.mimetype || 'application/octet-stream',
 			size: image.size,
 			promptLength: prompt.trim().length,
@@ -478,13 +490,18 @@ const normalizeFolderSlug = (value: string) => {
 	return value.trim().replace(/^\/+|\/+$/g, '').toLowerCase();
 };
 
-const buildStoryName = (prompt: string) => {
-	const base = prompt.trim().replace(/\s+/g, ' ').slice(0, 60);
-	return base || `AI Generated Story ${new Date().toISOString()}`;
+const buildStoryName = (storyName: string, prompt: string) => {
+	const fromStoryName = storyName.trim().replace(/\s+/g, ' ').slice(0, 80);
+	if (fromStoryName) {
+		return fromStoryName;
+	}
+
+	const fromPrompt = prompt.trim().replace(/\s+/g, ' ').slice(0, 60);
+	return fromPrompt || `AI Generated Story ${new Date().toISOString()}`;
 };
 
-const buildStorySlug = (prompt: string) => {
-	const base = prompt
+const buildStorySlug = (source: string) => {
+	const base = source
 		.toLowerCase()
 		.trim()
 		.replace(/[^a-z0-9\s-]/g, '')

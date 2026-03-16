@@ -1,16 +1,16 @@
 ## Plan: Screenshot To Story Generation Plugin
 
-Implement a Storyblok space plugin flow where users upload a screenshot plus a prompt, the backend uses OpenAI vision to infer a component layout from your existing schema, then creates a new draft story in a user-selected folder via Storyblok Management API. The safest approach is a strict JSON contract + server-side validation before create-story API calls.
+Implement a Storyblok space plugin flow where users upload a screenshot, provide a story name and prompt, and set a target folder (name/path/id). The backend uses OpenAI vision to infer a component layout from your existing schema, then creates a new draft story in Storyblok via Management API. The safest approach is a strict JSON contract + server-side validation before create-story API calls.
 
 **Steps**
 1. Phase 1 - Contracts and flow definition
 1. Define a canonical AI output contract aligned to existing components: page, grid, accordion, accordionItem, teaser, feature.
 2. Define server-side normalization/validation rules: enforce component whitelist, _uid creation, required accordion.accordionItem minimum 1, and Storyblok richtext format for accordionItem.content.
-3. Define request/response payloads for the plugin API endpoint: input fields (image file, prompt, parent folder id/slug as separate metadata field, not part of prompt text), output fields (story id, slug, editor URL, warnings).
+3. Define request/response payloads for the plugin API endpoint: input fields (image file, story name, prompt, parent folder name/path/id as separate metadata field, not part of prompt text), output fields (story id, slug, editor URL, warnings).
 
 2. Phase 2 - Plugin UI and request pipeline
-1. Add a generation panel to the plugin root page with: image upload, prompt textarea, folder selector input, and generate button. Depends on Phase 1 contract.
-2. Add client-side validation (file type, size, required prompt, required folder selection), loading state, and result/error UI.
+1. Add a generation panel to the plugin root page with: image upload, story name input, prompt textarea, folder input, and generate button. Depends on Phase 1 contract.
+2. Add client-side validation (file type, size, required story name, required prompt, required folder selection), loading state, and result/error UI.
 3. Submit multipart form-data with sb_app_bridge_token header using the same auth pattern already used by existing plugin components.
 
 3. Phase 3 - Backend generation service
@@ -18,13 +18,13 @@ Implement a Storyblok space plugin flow where users upload a screenshot plus a p
 2. Parse multipart input and validate image constraints; reject unsupported files early.
 3. Call OpenAI vision with screenshot + prompt only (exclude folder target from prompt), plus a strict component-schema instruction; request JSON-only output.
 4. Validate and normalize AI JSON into Storyblok-safe story.content (repair minor issues, reject hard schema violations).
-5. Create story via POST mapi.storyblok.com/v1/spaces/:space_id/stories with publish=false and user-selected parent folder targeting.
+5. Create story via POST mapi.storyblok.com/v1/spaces/:space_id/stories with publish=false, user-provided story name, and user-selected parent folder targeting.
 6. Return created story metadata to UI for immediate navigation/inspection.
 
 4. Phase 4 - Hardening and observability
-1. Add structured error categories (auth, validation, OpenAI, Storyblok API) and human-readable messages.
+1. Add structured error categories/codes (auth, validation, OpenAI, Storyblok API) and human-readable messages.
 2. Add retries/backoff for transient OpenAI/Storyblok failures and include timeout limits.
-3. Add lightweight request logging with correlation ids (no sensitive payload logging).
+3. Add lightweight request logging with correlation ids/request ids (no sensitive payload logging).
 4. Add rate limiting guardrails and max generation size limits.
 
 5. Phase 5 - Validation and rollout
@@ -47,14 +47,14 @@ Implement a Storyblok space plugin flow where users upload a screenshot plus a p
 **Verification**
 1. Unit-test normalization with valid/invalid AI outputs: missing _uid, unknown component, invalid accordion nesting, malformed richtext.
 2. Integration-test API route with mocked OpenAI + mocked Storyblok responses for success, 401, 422, and 429 paths.
-3. Manual test in Storyblok plugin iframe: upload image + prompt + folder, confirm draft story appears in selected location.
+3. Manual test in Storyblok plugin iframe: upload image + story name + prompt + folder, confirm draft story appears in selected location with correct name.
 4. Manual test rendering in frontend app route using created story slug and confirm all blocks render without runtime errors.
 5. Confirm create-story payload aligns with Storyblok docs: POST /v1/spaces/:space_id/stories, Authorization bearer OAuth token, body includes story and optional publish false.
 
 **Decisions**
 - Story status: draft by default (publish=false).
-- Input mode: screenshot + prompt.
-- Target location: user chooses folder each time.
+- Input mode: screenshot + story name + prompt.
+- Target location: user chooses folder each time (folder name/path/id supported).
 - Folder target is provided by dedicated input field and sent separately from AI prompt text.
 
 - Generation objective: balanced structure and copy.
@@ -65,6 +65,13 @@ Implement a Storyblok space plugin flow where users upload a screenshot plus a p
 - Excluded for now: automatic post-generation visual diffing, multi-language generation, auto-publish workflow, advanced component ranking/training.
 
 **Further considerations**
-1. Folder selection UX recommendation: start with folder id text input (fastest), then upgrade to folder picker API integration.
+1. Folder selection UX recommendation: keep name/path/id input for flexibility, then optionally upgrade to a folder picker API integration.
 2. OpenAI model recommendation: use a current multimodal model with JSON response control to minimize parsing failures.
 3. Start with strict schema rejection, then optionally add a repair layer once failure telemetry is available.
+
+**Current implementation status**
+1. Implemented: UI input fields for story name, prompt, folder, screenshot, plus optional debug JSON override.
+2. Implemented: OpenAI image-to-JSON generation with timeout/retry and strict schema validation.
+3. Implemented: Storyblok draft creation with folder resolution by id or name/path/slug.
+4. Implemented: structured backend error codes and requestId for diagnostics.
+5. Implemented: smoke checklist in docs.
