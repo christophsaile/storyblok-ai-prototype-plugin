@@ -9,7 +9,11 @@
 		"lint": "next lint"
 	},
 	"dependencies": {
+		"@emotion/react": "11.14.0",
+		"@emotion/styled": "11.14.1",
+		"@mui/material": "7.3.9",
 		"@storyblok/app-extension-auth": "^2.2.1",
+		"@storyblok/mui": "0.3.1",
 		"@types/formidable": "^3.5.0",
 		"formidable": "^3.5.4",
 		"jsonwebtoken": "^9.0.2",

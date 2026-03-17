@@ -1,5 +1,16 @@
 import { APP_BRIDGE_TOKEN_HEADER_KEY, KEY_TOKEN } from '@/utils/const';
 import { FormEvent, useMemo, useState } from 'react';
+import {
+	Alert,
+	Box,
+	Button,
+	Card,
+	CardContent,
+	Divider,
+	Stack,
+	TextField,
+	Typography,
+} from '@mui/material';
 
 const MAX_IMAGE_SIZE_MB = 10;
 const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
@@ -155,125 +166,166 @@ export default function StoryGenerationForm() {
 	};
 
 	return (
-		<section>
-			<h2>Generate Story From Screenshot</h2>
-			<p>
-				Upload a screenshot and prompt. Folder targeting is entered separately and
-				not included in the AI prompt.
-			</p>
-			<form onSubmit={onSubmit}>
-				<div>
-					<label htmlFor="storyName">Story Name</label>
-					<input
-						id="storyName"
-						type="text"
-						placeholder="Example: Spring Campaign Landing Page"
-						value={storyName}
-						onChange={(event) => {
-							setStoryName(event.target.value);
-							setErrors((prev) => ({ ...prev, storyName: undefined }));
-						}}
-					/>
-					{errors.storyName && <p>{errors.storyName}</p>}
-				</div>
+		<Card variant="outlined">
+			<CardContent>
+				<Stack spacing={2.5}>
+					<Box>
+						<Typography variant="h6" component="h2" gutterBottom>
+							Generate Story From Screenshot
+						</Typography>
+						<Typography variant="body2" color="text.secondary">
+							Upload a screenshot and prompt. Folder targeting is entered
+							separately and not included in the AI prompt.
+						</Typography>
+					</Box>
 
-				<div>
-					<label htmlFor="screenshot">Screenshot</label>
-					<input
-						id="screenshot"
-						type="file"
-						accept="image/*"
-						onChange={(event) => {
-							setImage(event.target.files?.[0] || null);
-							setErrors((prev) => ({ ...prev, image: undefined }));
-						}}
-					/>
-					{errors.image && <p>{errors.image}</p>}
-					{image && isValidImage(image) && (
-						<p>
-							Selected: {image.name} ({Math.round(image.size / 1024)} KB)
-						</p>
+					<Divider />
+
+					<Box component="form" onSubmit={onSubmit} noValidate>
+						<Stack spacing={2}>
+							<TextField
+								id="storyName"
+								label="Story Name"
+								placeholder="Example: Spring Campaign Landing Page"
+								value={storyName}
+								onChange={(event) => {
+									setStoryName(event.target.value);
+									setErrors((prev) => ({ ...prev, storyName: undefined }));
+								}}
+								error={Boolean(errors.storyName)}
+								helperText={errors.storyName}
+								fullWidth
+							/>
+
+							<Box>
+								<Typography variant="body2" fontWeight={600} gutterBottom>
+									Screenshot
+								</Typography>
+								<Button component="label" variant="outlined">
+									Choose Image
+									<input
+										hidden
+										type="file"
+										accept="image/*"
+										onChange={(event) => {
+											setImage(event.target.files?.[0] || null);
+											setErrors((prev) => ({ ...prev, image: undefined }));
+										}}
+									/>
+								</Button>
+								{errors.image && (
+									<Typography color="error" variant="body2" mt={1}>
+										{errors.image}
+									</Typography>
+								)}
+								{image && isValidImage(image) && (
+									<Typography variant="body2" color="text.secondary" mt={1}>
+										Selected: {image.name} ({Math.round(image.size / 1024)} KB)
+									</Typography>
+								)}
+							</Box>
+
+							<TextField
+								id="prompt"
+								label="Prompt"
+								placeholder="Describe what should be generated from the screenshot..."
+								value={prompt}
+								onChange={(event) => {
+									setPrompt(event.target.value);
+									setErrors((prev) => ({ ...prev, prompt: undefined }));
+								}}
+								error={Boolean(errors.prompt)}
+								helperText={errors.prompt}
+								fullWidth
+								multiline
+								minRows={5}
+							/>
+
+							<TextField
+								id="folder"
+								label="Target Folder (name, path, or id)"
+								placeholder="Example: Homepage, ai-generated, or 123456"
+								value={folder}
+								onChange={(event) => {
+									setFolder(event.target.value);
+									setErrors((prev) => ({ ...prev, folder: undefined }));
+								}}
+								error={Boolean(errors.folder)}
+								helperText={errors.folder}
+								fullWidth
+							/>
+
+							<TextField
+								id="generatedContentJson"
+								label="Generated Content JSON (optional debug override)"
+								placeholder="Leave empty to use OpenAI. If set, this JSON is validated directly."
+								value={generatedContentJson}
+								onChange={(event) => {
+									setGeneratedContentJson(event.target.value);
+								}}
+								fullWidth
+								multiline
+								minRows={8}
+							/>
+
+							<Button
+								type="submit"
+								variant="contained"
+								disableElevation
+								disabled={!formReady || isSubmitting}
+							>
+								{isSubmitting ? 'Generating...' : 'Generate Story'}
+							</Button>
+						</Stack>
+					</Box>
+
+					{requestError && <Alert severity="error">{requestError}</Alert>}
+					{responseMeta && <Alert severity="info">{responseMeta}</Alert>}
+					{result?.validationErrors && result.validationErrors.length > 0 && (
+						<Alert severity="warning">
+							<Typography variant="body2" fontWeight={600} mb={1}>
+								Validation errors
+							</Typography>
+							<ul>
+								{result.validationErrors.map((issue) => (
+									<li key={`${issue.path}:${issue.message}`}>
+										{issue.path}: {issue.message}
+									</li>
+								))}
+							</ul>
+						</Alert>
 					)}
-				</div>
-
-				<div>
-					<label htmlFor="prompt">Prompt</label>
-					<textarea
-						id="prompt"
-						rows={5}
-						placeholder="Describe what should be generated from the screenshot..."
-						value={prompt}
-						onChange={(event) => {
-							setPrompt(event.target.value);
-							setErrors((prev) => ({ ...prev, prompt: undefined }));
-						}}
-					/>
-					{errors.prompt && <p>{errors.prompt}</p>}
-				</div>
-
-				<div>
-					<label htmlFor="folder">Target Folder (name, path, or id)</label>
-					<input
-						id="folder"
-						type="text"
-						placeholder="Example: Homepage, ai-generated, or 123456"
-						value={folder}
-						onChange={(event) => {
-							setFolder(event.target.value);
-							setErrors((prev) => ({ ...prev, folder: undefined }));
-						}}
-					/>
-					{errors.folder && <p>{errors.folder}</p>}
-				</div>
-
-				<div>
-					<label htmlFor="generatedContentJson">
-						Generated Content JSON (optional debug override)
-					</label>
-					<textarea
-						id="generatedContentJson"
-						rows={8}
-						placeholder="Leave empty to use OpenAI. If set, this JSON is validated directly."
-						value={generatedContentJson}
-						onChange={(event) => {
-							setGeneratedContentJson(event.target.value);
-						}}
-					/>
-				</div>
-
-				<button type="submit" disabled={!formReady || isSubmitting}>
-					{isSubmitting ? 'Generating...' : 'Generate Story'}
-				</button>
-			</form>
-
-			{requestError && <p>{requestError}</p>}
-			{responseMeta && <p>{responseMeta}</p>}
-			{result?.validationErrors && result.validationErrors.length > 0 && (
-				<div>
-					<p>Validation errors:</p>
-					<ul>
-						{result.validationErrors.map((issue) => (
-							<li key={`${issue.path}:${issue.message}`}>
-								{issue.path}: {issue.message}
-							</li>
-						))}
-					</ul>
-				</div>
-			)}
-			{result?.story && (
-				<div>
-					<p>
-						Created draft story {result.story.name} (#{result.story.id}) in folder{' '}
-						{result.story.parentId}.
-					</p>
-					<p>
-						<a href={result.story.editorUrl} target="_blank" rel="noreferrer">
-							Open in Storyblok editor
-						</a>
-					</p>
-				</div>
-			)}
-			{result && <pre>{JSON.stringify(result, null, 2)}</pre>}
-		</section>
+					{result?.story && (
+						<Alert severity="success">
+							<Typography variant="body2">
+								Created draft story {result.story.name} (#{result.story.id}) in
+								 folder {result.story.parentId}.
+							</Typography>
+							<Box mt={1}>
+								<Button
+									component="a"
+									href={result.story.editorUrl}
+									target="_blank"
+									rel="noreferrer"
+									size="small"
+								>
+									Open in Storyblok editor
+								</Button>
+							</Box>
+						</Alert>
+					)}
+					{result && (
+						<TextField
+							label="Raw API Response"
+							value={JSON.stringify(result, null, 2)}
+							fullWidth
+							multiline
+							minRows={10}
+							InputProps={{ readOnly: true }}
+						/>
+					)}
+				</Stack>
+			</CardContent>
+		</Card>
 	);
 }

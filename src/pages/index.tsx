@@ -3,15 +3,8 @@ import { useAppBridge } from '@/hooks';
 import UserInfo from '@/components/UserInfo';
 import Example from '@/components/Example';
 import StoryGenerationForm from '@/components/StoryGenerationForm';
-
-type User = {
-	id: number;
-	friendly_name: string;
-};
-
-type UserInfo = {
-	user: User;
-};
+import { AppLayout, StoryblokIcon } from '@storyblok/mui';
+import { Stack, Typography } from '@mui/material';
 
 export default function Home() {
 	const { completed } = useAppBridge({ type: 'space-plugin', oauth: true });
@@ -25,12 +18,20 @@ export default function Home() {
 			</Head>
 			<main>
 				{completed && (
-					<div>
-						<p>Authenticated!</p>
+					<AppLayout
+						title="AI Story Generator"
+						subtitle="Generate Storyblok stories from screenshots"
+						icon={<StoryblokIcon fontSize="small" />}
+					>
+						<Stack spacing={3}>
+							<Typography color="success.main" fontWeight={600}>
+								Authenticated
+							</Typography>
 						<StoryGenerationForm />
 						<UserInfo />
 						<Example />
-					</div>
+						</Stack>
+					</AppLayout>
 				)}
 			</main>
 		</>
