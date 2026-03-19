@@ -3,8 +3,12 @@ import { readFile } from 'node:fs/promises';
 import OpenAI from 'openai';
 import { StoryblokPromptSchemaContext } from './storyblokPromptSchema';
 
-const OPENAI_TIMEOUT_MS = 25000;
-const OPENAI_MAX_RETRIES = 2;
+const OPENAI_TIMEOUT_MS = parsePositiveInt(process.env.OPENAI_TIMEOUT_MS, 90000);
+const OPENAI_MAX_RETRIES = parsePositiveInt(process.env.OPENAI_MAX_RETRIES, 2);
+const OPENAI_MAX_COMPLETION_TOKENS = parsePositiveInt(
+	process.env.OPENAI_MAX_COMPLETION_TOKENS,
+	2200,
+);
 
 export const generateStoryContentFromImage = async (params: {
 	image: File;
@@ -32,6 +36,7 @@ export const generateStoryContentFromImage = async (params: {
 		const completion = await client.chat.completions.create({
 			model,
 			temperature: 0.2,
+			max_completion_tokens: OPENAI_MAX_COMPLETION_TOKENS,
 			response_format: { type: 'json_object' },
 			messages: [
 				{
@@ -63,6 +68,11 @@ export const generateStoryContentFromImage = async (params: {
 
 		content = completion.choices?.[0]?.message?.content;
 	} catch (error) {
+		if (error instanceof Error && /timed out/i.test(error.message)) {
+			throw new Error(
+				`Request timed out after ${Math.round(OPENAI_TIMEOUT_MS / 1000)}s. Try a smaller image or increase OPENAI_TIMEOUT_MS.`,
+			);
+		}
 		const message = error instanceof Error ? error.message : 'OpenAI request failed.';
 		throw new Error(message);
 	}
@@ -138,3 +148,16 @@ const buildSystemPrompt = (schemaContext: StoryblokPromptSchemaContext) => {
 const buildUserComponentHint = (schemaContext: StoryblokPromptSchemaContext) => {
 	return `Include only these components: ${schemaContext.allowedComponents.join(', ')}.`;
 };
+
+function parsePositiveInt(value: string | undefined, fallback: number) {
+	if (!value) {
+		return fallback;
+	}
+
+	const parsed = Number.parseInt(value, 10);
+	if (Number.isFinite(parsed) && parsed > 0) {
+		return parsed;
+	}
+
+	return fallback;
+}

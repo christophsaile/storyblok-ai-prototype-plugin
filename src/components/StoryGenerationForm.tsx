@@ -6,6 +6,7 @@ import {
 	Button,
 	Card,
 	CardContent,
+	CircularProgress,
 	Divider,
 	Stack,
 	TextField,
@@ -448,6 +449,17 @@ export default function StoryGenerationForm() {
 							>
 								{isSubmitting ? 'Generating...' : 'Generate Story'}
 							</Button>
+
+							{isSubmitting && (
+								<Alert severity="info" icon={false}>
+									<Stack direction="row" spacing={1.5} alignItems="center">
+										<CircularProgress size={18} />
+										<Typography variant="body2">
+											Submitting generation request. This can take up to a minute for larger screenshots.
+										</Typography>
+									</Stack>
+								</Alert>
+							)}
 						</Stack>
 					</Box>
 
