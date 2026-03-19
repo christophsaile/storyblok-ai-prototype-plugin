@@ -8,6 +8,8 @@ import {
 } from '@/utils/server';
 import formidable, { Fields, File, Files } from 'formidable';
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 
 export const config = {
 	api: {
@@ -63,6 +65,16 @@ type GenerateErrorResponse = {
 const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
 const STORYBLOK_TIMEOUT_MS = 12000;
 const STORYBLOK_MAX_RETRIES = 2;
+const SCHEMA_SNAPSHOT_DIR = path.resolve(
+	process.cwd(),
+	'src/utils/server/storyblokSchemaSnapshot',
+);
+const COMPONENTS_SNAPSHOT_FILE = path.resolve(SCHEMA_SNAPSHOT_DIR, 'components.json');
+const STORYBLOK_BASE_TYPES_FILE = path.resolve(SCHEMA_SNAPSHOT_DIR, 'storyblok.d.ts');
+const STORYBLOK_COMPONENT_TYPES_FILE = path.resolve(
+	SCHEMA_SNAPSHOT_DIR,
+	'storyblok-components.d.ts',
+);
 
 export default async function handler(
 	req: NextApiRequest,
@@ -187,15 +199,18 @@ export default async function handler(
 		});
 	}
 
-	const schemaContextResult = await fetchPromptSchemaContext({
-		spaceId,
-		accessToken: appSession.accessToken,
-	});
+	const schemaContextResult = await fetchPromptSchemaContext();
 
-	if (schemaContextResult.error) {
+	if (!schemaContextResult.ok) {
 		console.warn(
 			`[generate-story:${requestId}] Failed to load Storyblok component schema: ${schemaContextResult.error}`,
 		);
+		return res.status(500).json({
+			ok: false,
+			requestId,
+			code: 'internal_error',
+			error: 'Schema context is required and could not be loaded.',
+		});
 	}
 
 	const candidateContent = await parseCandidateContent({
@@ -214,7 +229,7 @@ export default async function handler(
 	}
 
 	const validation = validateGeneratedStoryContent(candidateContent.value, {
-		allowedComponents: schemaContextResult.schemaContext?.allowedComponents,
+		allowedComponents: schemaContextResult.schemaContext.allowedComponents,
 	});
 	if (!validation.ok) {
 		return res.status(422).json({
@@ -307,10 +322,6 @@ type StoryblokListStoriesResponse = {
 type StoryblokCreateStoryResponse = {
 	story?: StoryblokStory;
 	error?: string;
-};
-
-type StoryblokListComponentsResponse = {
-	components?: unknown[];
 };
 
 const resolveFolderId = async (params: {
@@ -539,14 +550,14 @@ const buildStorySlug = (source: string) => {
 };
 
 const buildStoryEditorUrl = (spaceId: number, storyId: number) => {
-	return `https://app.storyblok.com/#/me/spaces/${spaceId}/stories/${storyId}`;
+	return `https://app.storyblok.com/#/me/spaces/${spaceId}/stories/0/0/${storyId}`;
 };
 
 const parseCandidateContent = async (params: {
 	generatedContentJson: string;
 	prompt: string;
 	image: File;
-	schemaContext?: StoryblokPromptSchemaContext;
+	schemaContext: StoryblokPromptSchemaContext;
 }): Promise<
 	| { ok: true; value: Record<string, unknown> }
 	| { ok: false; status: 422 | 500; error: string }
@@ -592,41 +603,49 @@ const parseCandidateContent = async (params: {
 	}
 };
 
-const fetchPromptSchemaContext = async (params: {
-	spaceId: number;
-	accessToken: string;
-}): Promise<{ schemaContext?: StoryblokPromptSchemaContext; error?: string }> => {
+const fetchPromptSchemaContext = async (): Promise<
+	| { ok: true; schemaContext: StoryblokPromptSchemaContext }
+	| { ok: false; error: string }
+> => {
 	try {
-		const url = new URL(
-			`https://mapi.storyblok.com/v1/spaces/${params.spaceId}/components`,
-		);
-		url.searchParams.set('per_page', '100');
+		const [componentsJson, storyblokBaseTypes, storyblokComponentTypes] = await Promise.all([
+			readFile(COMPONENTS_SNAPSHOT_FILE, 'utf8'),
+			readFile(STORYBLOK_BASE_TYPES_FILE, 'utf8'),
+			readFile(STORYBLOK_COMPONENT_TYPES_FILE, 'utf8'),
+		]);
 
-		const response = await fetchStoryblokWithRetry({
-			url: url.toString(),
-			accessToken: params.accessToken,
-			method: 'GET',
-		});
-
-		if (!response.ok) {
+		const parsedComponents = JSON.parse(componentsJson) as unknown;
+		if (!Array.isArray(parsedComponents)) {
 			return {
-				error: `Storyblok returned ${response.status}.`,
+				ok: false,
+				error: 'Hardcoded components.json is not an array.',
 			};
 		}
 
-		const data = (await response.json()) as StoryblokListComponentsResponse;
-		const schemaContext = toPromptSchemaContext(data);
+		const storyblokTypes = [storyblokBaseTypes.trim(), storyblokComponentTypes.trim()]
+			.filter(Boolean)
+			.join('\n\n');
+
+		const schemaContext = toPromptSchemaContext(
+			{ components: parsedComponents },
+			{ storyblokTypes },
+		);
 
 		if (!schemaContext) {
 			return {
-				error: 'Components payload could not be transformed.',
+				ok: false,
+				error: 'Hardcoded schema snapshot could not be transformed.',
 			};
 		}
 
-		return { schemaContext };
+		return { ok: true, schemaContext };
 	} catch (error) {
 		return {
-			error: error instanceof Error ? error.message : 'Unknown schema fetch error.',
+			ok: false,
+			error:
+				error instanceof Error
+					? `Failed to load hardcoded schema snapshot: ${error.message}`
+					: 'Failed to load hardcoded schema snapshot.',
 		};
 	}
 };

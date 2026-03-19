@@ -1,0 +1,870 @@
+[
+  {
+    "name": "button",
+    "display_name": "Button",
+    "description": "A button that can link to any URL.",
+    "created_at": "2026-03-16T15:25:26.194Z",
+    "updated_at": "2026-03-16T15:25:26.194Z",
+    "id": 155587076894928,
+    "schema": {
+      "text": {
+        "type": "text",
+        "id": "737e4081-36ab-4530-908e-1ccbd12d194a",
+        "pos": 0
+      },
+      "link": {
+        "type": "multilink",
+        "id": "4b5e048f-b4e4-4cac-aefa-eacc3b566ece",
+        "pos": 1,
+        "email_link_type": true,
+        "asset_link_type": true,
+        "allow_target_blank": true,
+        "link_scope": "pages",
+        "force_link_scope": true,
+        "required": true
+      },
+      "color": {
+        "type": "option",
+        "id": "12a9a04b-2852-435a-a6a4-e61e9fc98353",
+        "pos": 2,
+        "default_value": "primary",
+        "required": true,
+        "options": [
+          {
+            "name": "Primary",
+            "value": "primary"
+          },
+          {
+            "name": "Secondary",
+            "value": "secondary"
+          }
+        ]
+      }
+    },
+    "image": null,
+    "preview_field": null,
+    "is_root": false,
+    "preview_tmpl": null,
+    "is_nestable": true,
+    "all_presets": [],
+    "preset_id": null,
+    "real_name": "Button",
+    "component_group_uuid": null,
+    "color": null,
+    "icon": null,
+    "internal_tags_list": [],
+    "internal_tag_ids": [],
+    "content_type_asset_preview": null,
+    "metadata": {}
+  },
+  {
+    "name": "card",
+    "display_name": "Card",
+    "description": null,
+    "created_at": "2026-03-16T15:25:26.200Z",
+    "updated_at": "2026-03-16T15:25:26.200Z",
+    "id": 155587076927698,
+    "schema": {
+      "icon": {
+        "type": "asset",
+        "id": "c1e60a72-d45a-4080-99e0-4641fd502d86",
+        "pos": 0,
+        "filetypes": [
+          "images"
+        ]
+      },
+      "description": {
+        "type": "richtext",
+        "id": "706b7be4-e5da-4292-bfa7-ad76ba5ae101",
+        "customize_toolbar": true,
+        "toolbar": [
+          "h1",
+          "h2",
+          "h3",
+          "h4",
+          "h5",
+          "h6",
+          "image",
+          "italic",
+          "link",
+          "olist",
+          "paragraph",
+          "paste-action",
+          "redo",
+          "strike",
+          "subscript",
+          "superscript",
+          "underline",
+          "undo",
+          "ai-complete",
+          "ai-shorten",
+          "ai-extend",
+          "ai-rephrase",
+          "ai-summarize",
+          "ai-simplify",
+          "ai-tone",
+          "ai-emoji",
+          "ai-translate",
+          "ai-spelling",
+          "ai-tldr",
+          "rtl",
+          "ltr",
+          "bold",
+          "export",
+          "import",
+          "list",
+          "inlinecode",
+          "code",
+          "copy",
+          "cut",
+          "emoji",
+          "blok",
+          "hrule",
+          "quote"
+        ],
+        "allow_target_blank": true,
+        "restrict_components": true,
+        "component_whitelist": [
+          "card"
+        ],
+        "pos": 1
+      }
+    },
+    "image": null,
+    "preview_field": "description",
+    "is_root": false,
+    "preview_tmpl": null,
+    "is_nestable": true,
+    "all_presets": [],
+    "preset_id": null,
+    "real_name": "Card",
+    "component_group_uuid": null,
+    "color": null,
+    "icon": null,
+    "internal_tags_list": [],
+    "internal_tag_ids": [],
+    "content_type_asset_preview": null,
+    "metadata": {}
+  },
+  {
+    "name": "cards",
+    "display_name": "Cards",
+    "description": null,
+    "created_at": "2026-03-16T15:25:26.187Z",
+    "updated_at": "2026-03-16T15:25:26.187Z",
+    "id": 155587076874447,
+    "schema": {
+      "description": {
+        "type": "richtext",
+        "id": "b588ca87-fa83-470d-bfd5-3162671e2105",
+        "customize_toolbar": true,
+        "toolbar": [
+          "h1",
+          "h2",
+          "h3",
+          "h4",
+          "h5",
+          "h6",
+          "image",
+          "italic",
+          "link",
+          "olist",
+          "paragraph",
+          "paste-action",
+          "redo",
+          "strike",
+          "subscript",
+          "superscript",
+          "underline",
+          "undo",
+          "ai-complete",
+          "ai-shorten",
+          "ai-extend",
+          "ai-rephrase",
+          "ai-summarize",
+          "ai-simplify",
+          "ai-tone",
+          "ai-emoji",
+          "ai-translate",
+          "ai-spelling",
+          "ai-tldr",
+          "rtl",
+          "ltr",
+          "bold",
+          "export",
+          "import",
+          "list",
+          "inlinecode",
+          "code",
+          "copy",
+          "cut",
+          "emoji",
+          "blok",
+          "hrule",
+          "quote"
+        ],
+        "allow_target_blank": true,
+        "restrict_components": true,
+        "component_whitelist": [
+          "card"
+        ],
+        "pos": 0
+      },
+      "cards": {
+        "type": "bloks",
+        "id": "1fa8ed89-cf3d-4835-a6f6-6fa2f86c0336",
+        "pos": 1,
+        "restrict_components": true,
+        "component_whitelist": [
+          "card"
+        ]
+      }
+    },
+    "image": null,
+    "preview_field": "description",
+    "is_root": false,
+    "preview_tmpl": null,
+    "is_nestable": true,
+    "all_presets": [],
+    "preset_id": null,
+    "real_name": "Cards",
+    "component_group_uuid": null,
+    "color": null,
+    "icon": null,
+    "internal_tags_list": [],
+    "internal_tag_ids": [],
+    "content_type_asset_preview": null,
+    "metadata": {}
+  },
+  {
+    "name": "hero",
+    "display_name": "Hero",
+    "description": "A hero is a full-width section with a background, rich text, and an optional image.",
+    "created_at": "2026-03-16T15:25:26.310Z",
+    "updated_at": "2026-03-16T15:25:26.310Z",
+    "id": 155587077419223,
+    "schema": {
+      "image": {
+        "type": "asset",
+        "pos": 0,
+        "filetypes": [
+          "images"
+        ],
+        "id": "2d18d200-05ae-4d10-8f60-7b6791eb5cf6"
+      },
+      "imagePadding": {
+        "type": "boolean",
+        "pos": 1,
+        "id": "32186acd-2983-4f19-bea3-9345f60d2523"
+      },
+      "backgroundColor": {
+        "type": "option",
+        "pos": 2,
+        "id": "6728ebac-d071-438c-9e2a-f51e7e9f2d8c",
+        "options": [
+          {
+            "name": "White",
+            "value": "white"
+          },
+          {
+            "name": "Beige",
+            "value": "beige"
+          },
+          {
+            "name": "Grey",
+            "value": "grey"
+          },
+          {
+            "name": "Purple",
+            "value": "purple"
+          },
+          {
+            "name": "Orange",
+            "value": "orange"
+          },
+          {
+            "name": "Yellow",
+            "value": "yellow"
+          },
+          {
+            "name": "Green",
+            "value": "green"
+          },
+          {
+            "name": "Pink",
+            "value": "pink"
+          },
+          {
+            "name": "Blue",
+            "value": "blue"
+          }
+        ]
+      },
+      "textAlignment": {
+        "type": "option",
+        "pos": 3,
+        "id": "55da1eb4-d132-45bb-9d4f-d1b7b2eb5699",
+        "options": [
+          {
+            "name": "Left",
+            "value": "left"
+          },
+          {
+            "name": "Right",
+            "value": "right"
+          },
+          {
+            "name": "Center",
+            "value": "center"
+          }
+        ]
+      },
+      "description": {
+        "type": "richtext",
+        "id": "6275fa19-72f9-4b9e-a544-6bdc9c488397",
+        "customize_toolbar": true,
+        "toolbar": [
+          "h1",
+          "h2",
+          "h3",
+          "h4",
+          "h5",
+          "h6",
+          "image",
+          "italic",
+          "link",
+          "olist",
+          "paragraph",
+          "paste-action",
+          "redo",
+          "strike",
+          "subscript",
+          "superscript",
+          "underline",
+          "undo",
+          "ai-complete",
+          "ai-shorten",
+          "ai-extend",
+          "ai-rephrase",
+          "ai-summarize",
+          "ai-simplify",
+          "ai-tone",
+          "ai-emoji",
+          "ai-translate",
+          "ai-spelling",
+          "ai-tldr",
+          "rtl",
+          "ltr",
+          "bold",
+          "export",
+          "import",
+          "list",
+          "inlinecode",
+          "code",
+          "copy",
+          "cut",
+          "emoji",
+          "blok",
+          "hrule",
+          "quote"
+        ],
+        "allow_target_blank": true,
+        "restrict_components": true,
+        "component_whitelist": [
+          "card"
+        ],
+        "pos": 4
+      },
+      "buttons": {
+        "type": "bloks",
+        "id": "f9053069-f5a7-4307-8483-b7bb9853732a",
+        "pos": 5,
+        "restrict_components": true,
+        "component_whitelist": [
+          "button"
+        ]
+      }
+    },
+    "image": null,
+    "preview_field": "description",
+    "is_root": false,
+    "preview_tmpl": null,
+    "is_nestable": true,
+    "all_presets": [],
+    "preset_id": null,
+    "real_name": "Hero",
+    "component_group_uuid": null,
+    "color": null,
+    "icon": null,
+    "internal_tags_list": [],
+    "internal_tag_ids": [],
+    "content_type_asset_preview": null,
+    "metadata": {}
+  },
+  {
+    "name": "page",
+    "display_name": "Page",
+    "description": "A page has a stacked layout with a header and a footer. It can contain any number of sections.",
+    "created_at": "2026-03-16T15:25:26.336Z",
+    "updated_at": "2026-03-16T15:25:26.336Z",
+    "id": 155587077480664,
+    "schema": {
+      "body": {
+        "type": "bloks",
+        "id": "1823e97a-93d0-4995-8606-abc25f6cc0ba"
+      }
+    },
+    "image": null,
+    "preview_field": null,
+    "is_root": true,
+    "preview_tmpl": null,
+    "is_nestable": false,
+    "all_presets": [],
+    "preset_id": null,
+    "real_name": "Page",
+    "component_group_uuid": null,
+    "color": null,
+    "icon": null,
+    "internal_tags_list": [],
+    "internal_tag_ids": [],
+    "content_type_asset_preview": null,
+    "metadata": {}
+  },
+  {
+    "name": "tab",
+    "display_name": "Tab",
+    "description": null,
+    "created_at": "2026-03-16T15:25:26.204Z",
+    "updated_at": "2026-03-16T15:25:26.204Z",
+    "id": 155587076944085,
+    "schema": {
+      "title": {
+        "type": "text",
+        "id": "7111b075-da27-48aa-b699-9921574a76ad"
+      },
+      "content": {
+        "type": "bloks",
+        "id": "380eaa0f-5b57-4f88-8e13-91a4f78541cb",
+        "maximum": 1,
+        "minimum": 1
+      }
+    },
+    "image": null,
+    "preview_field": "title",
+    "is_root": false,
+    "preview_tmpl": null,
+    "is_nestable": true,
+    "all_presets": [],
+    "preset_id": null,
+    "real_name": "Tab",
+    "component_group_uuid": null,
+    "color": null,
+    "icon": null,
+    "internal_tags_list": [],
+    "internal_tag_ids": [],
+    "content_type_asset_preview": null,
+    "metadata": {}
+  },
+  {
+    "name": "tabs",
+    "display_name": "Tabs",
+    "description": null,
+    "created_at": "2026-03-16T15:25:26.205Z",
+    "updated_at": "2026-03-16T15:25:26.205Z",
+    "id": 155587076944084,
+    "schema": {
+      "description": {
+        "type": "richtext",
+        "id": "b966a4d1-fe92-4e6b-9e41-39fba3972bcc",
+        "customize_toolbar": true,
+        "toolbar": [
+          "h1",
+          "h2",
+          "h3",
+          "h4",
+          "h5",
+          "h6",
+          "image",
+          "italic",
+          "link",
+          "olist",
+          "paragraph",
+          "paste-action",
+          "redo",
+          "strike",
+          "subscript",
+          "superscript",
+          "underline",
+          "undo",
+          "ai-complete",
+          "ai-shorten",
+          "ai-extend",
+          "ai-rephrase",
+          "ai-summarize",
+          "ai-simplify",
+          "ai-tone",
+          "ai-emoji",
+          "ai-translate",
+          "ai-spelling",
+          "ai-tldr",
+          "rtl",
+          "ltr",
+          "bold",
+          "export",
+          "import",
+          "list",
+          "inlinecode",
+          "code",
+          "copy",
+          "cut",
+          "emoji",
+          "blok",
+          "hrule",
+          "quote"
+        ],
+        "allow_target_blank": true,
+        "restrict_components": true,
+        "component_whitelist": [
+          "card"
+        ],
+        "pos": 0
+      },
+      "tabs": {
+        "pos": 1,
+        "type": "bloks",
+        "id": "50fc7da9-5e86-4a04-aeb9-f5e2e0785cdf",
+        "restrict_components": true,
+        "component_whitelist": [
+          "tab"
+        ]
+      }
+    },
+    "image": null,
+    "preview_field": "description",
+    "is_root": false,
+    "preview_tmpl": null,
+    "is_nestable": true,
+    "all_presets": [],
+    "preset_id": null,
+    "real_name": "Tabs",
+    "component_group_uuid": null,
+    "color": null,
+    "icon": null,
+    "internal_tags_list": [],
+    "internal_tag_ids": [],
+    "content_type_asset_preview": null,
+    "metadata": {}
+  },
+  {
+    "name": "teamMember",
+    "display_name": "Team Member",
+    "description": null,
+    "created_at": "2026-03-16T15:25:26.304Z",
+    "updated_at": "2026-03-16T15:25:26.304Z",
+    "id": 155587077365974,
+    "schema": {
+      "name": {
+        "type": "text",
+        "id": "6b4fa777-4641-4530-9730-5ccc3ed02843",
+        "pos": 0
+      },
+      "title": {
+        "type": "text",
+        "id": "6ab1aab3-6860-4ab5-a12a-81df5546a78c",
+        "pos": 1
+      },
+      "image": {
+        "type": "asset",
+        "id": "848c293d-abc5-4ca9-897f-7d77719d7766",
+        "pos": 2,
+        "filetypes": [
+          "images"
+        ]
+      },
+      "backgroundColor": {
+        "type": "option",
+        "id": "c36b0243-c14e-499e-80f9-903e3d2251f9",
+        "pos": 3,
+        "options": [
+          {
+            "name": "White",
+            "value": "white"
+          },
+          {
+            "name": "Beige",
+            "value": "beige"
+          },
+          {
+            "name": "Grey",
+            "value": "grey"
+          },
+          {
+            "name": "Purple",
+            "value": "purple"
+          },
+          {
+            "name": "Orange",
+            "value": "orange"
+          },
+          {
+            "name": "Yellow",
+            "value": "yellow"
+          },
+          {
+            "name": "Green",
+            "value": "green"
+          },
+          {
+            "name": "Pink",
+            "value": "pink"
+          }
+        ]
+      }
+    },
+    "image": null,
+    "preview_field": "name",
+    "is_root": true,
+    "preview_tmpl": null,
+    "is_nestable": true,
+    "all_presets": [],
+    "preset_id": null,
+    "real_name": "Team Member",
+    "component_group_uuid": null,
+    "color": null,
+    "icon": null,
+    "internal_tags_list": [],
+    "internal_tag_ids": [],
+    "content_type_asset_preview": null,
+    "metadata": {}
+  },
+  {
+    "name": "teamMembers",
+    "display_name": "Team Members",
+    "description": null,
+    "created_at": "2026-03-16T15:25:26.195Z",
+    "updated_at": "2026-03-16T15:25:26.195Z",
+    "id": 155587076907217,
+    "schema": {
+      "teamMembers": {
+        "type": "options",
+        "id": "5cc270b4-13d7-4cf2-b56d-c14682b849f5",
+        "pos": 0,
+        "source": "internal_stories",
+        "folder_slug": "team/",
+        "filter_content_type": [
+          "teamMember"
+        ],
+        "entry_appearance": "card",
+        "allow_advanced_search": true,
+        "min_options": "1"
+      },
+      "description": {
+        "pos": 1,
+        "type": "richtext",
+        "id": "182c908b-8bc8-47b0-ab8d-ce0b999513dc",
+        "customize_toolbar": true,
+        "toolbar": [
+          "h1",
+          "h2",
+          "h3",
+          "h4",
+          "h5",
+          "h6",
+          "image",
+          "italic",
+          "link",
+          "olist",
+          "paragraph",
+          "paste-action",
+          "redo",
+          "strike",
+          "subscript",
+          "superscript",
+          "underline",
+          "undo",
+          "ai-complete",
+          "ai-shorten",
+          "ai-extend",
+          "ai-rephrase",
+          "ai-summarize",
+          "ai-simplify",
+          "ai-tone",
+          "ai-emoji",
+          "ai-translate",
+          "ai-spelling",
+          "ai-tldr",
+          "rtl",
+          "ltr",
+          "bold",
+          "export",
+          "import",
+          "list",
+          "inlinecode",
+          "code",
+          "copy",
+          "cut",
+          "emoji",
+          "blok",
+          "hrule",
+          "quote"
+        ],
+        "allow_target_blank": true,
+        "restrict_components": true,
+        "component_whitelist": [
+          "card"
+        ]
+      }
+    },
+    "image": null,
+    "preview_field": null,
+    "is_root": false,
+    "preview_tmpl": null,
+    "is_nestable": true,
+    "all_presets": [],
+    "preset_id": null,
+    "real_name": "Team Members",
+    "component_group_uuid": null,
+    "color": null,
+    "icon": null,
+    "internal_tags_list": [],
+    "internal_tag_ids": [],
+    "content_type_asset_preview": null,
+    "metadata": {}
+  },
+  {
+    "name": "testimonial",
+    "display_name": "Testimonial",
+    "description": null,
+    "created_at": "2026-03-16T15:25:26.203Z",
+    "updated_at": "2026-03-16T15:25:26.203Z",
+    "id": 155587076931795,
+    "schema": {
+      "quote": {
+        "type": "textarea",
+        "pos": 0,
+        "id": "8970e0b0-40ab-4d4f-b78e-09b8cfbb15fb"
+      },
+      "name": {
+        "type": "text",
+        "pos": 1,
+        "id": "5a622b9c-aa38-4c3a-8275-00d5bf801978"
+      },
+      "title": {
+        "type": "text",
+        "pos": 2,
+        "id": "48b642f1-fd75-4a5f-8ba1-7265daf68342"
+      },
+      "image": {
+        "type": "asset",
+        "id": "8999fce4-a337-4e8b-bc2e-2bd0ebeb3344",
+        "pos": 3,
+        "filetypes": [
+          "images"
+        ]
+      },
+      "imageBackgroundColor": {
+        "type": "option",
+        "id": "nWup85FGda2gQr-P61ExYQ4",
+        "pos": 3,
+        "options": [
+          {
+            "name": "White",
+            "value": "white"
+          },
+          {
+            "name": "Beige",
+            "value": "beige"
+          },
+          {
+            "name": "Grey",
+            "value": "grey"
+          },
+          {
+            "name": "Purple",
+            "value": "purple"
+          },
+          {
+            "name": "Orange",
+            "value": "orange"
+          },
+          {
+            "name": "Yellow",
+            "value": "yellow"
+          },
+          {
+            "name": "Green",
+            "value": "green"
+          },
+          {
+            "name": "Pink",
+            "value": "pink"
+          },
+          {
+            "name": "Blue",
+            "value": "blue"
+          }
+        ]
+      }
+    },
+    "image": null,
+    "preview_field": null,
+    "is_root": false,
+    "preview_tmpl": null,
+    "is_nestable": true,
+    "all_presets": [],
+    "preset_id": null,
+    "real_name": "Testimonial",
+    "component_group_uuid": null,
+    "color": null,
+    "icon": null,
+    "internal_tags_list": [],
+    "internal_tag_ids": [],
+    "content_type_asset_preview": null,
+    "metadata": {}
+  },
+  {
+    "name": "testimonials",
+    "display_name": "Testimonials",
+    "description": "",
+    "created_at": "2026-03-16T15:25:26.099Z",
+    "updated_at": "2026-03-16T15:25:26.099Z",
+    "id": 155587076509902,
+    "schema": {
+      "title": {
+        "type": "text",
+        "pos": 0,
+        "required": false,
+        "id": "1f0e5465-e30e-4200-880e-ec1b894de7ef"
+      },
+      "description": {
+        "type": "text",
+        "pos": 1,
+        "id": "e6dc5fee-685f-4bbc-9661-f8c2758a3211"
+      },
+      "testimonials": {
+        "type": "bloks",
+        "id": "9365923c-4f30-473d-8798-fc5fca8b8e14",
+        "pos": 2,
+        "restrict_components": true,
+        "component_whitelist": [
+          "testimonial"
+        ]
+      }
+    },
+    "image": null,
+    "preview_field": null,
+    "is_root": false,
+    "preview_tmpl": null,
+    "is_nestable": true,
+    "all_presets": [],
+    "preset_id": null,
+    "real_name": "Testimonials",
+    "component_group_uuid": null,
+    "color": null,
+    "icon": null,
+    "internal_tags_list": [],
+    "internal_tag_ids": [],
+    "content_type_asset_preview": null,
+    "metadata": {}
+  }
+]

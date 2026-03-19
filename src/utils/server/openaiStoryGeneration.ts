@@ -1,81 +1,72 @@
 import { File } from 'formidable';
 import { readFile } from 'node:fs/promises';
+import OpenAI from 'openai';
 import { StoryblokPromptSchemaContext } from './storyblokPromptSchema';
 
-const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 const OPENAI_TIMEOUT_MS = 25000;
 const OPENAI_MAX_RETRIES = 2;
-
-type OpenAIChoice = {
-	message?: {
-		content?: string | null;
-	};
-};
-
-type OpenAIChatResponse = {
-	choices?: OpenAIChoice[];
-	error?: {
-		message?: string;
-	};
-};
 
 export const generateStoryContentFromImage = async (params: {
 	image: File;
 	prompt: string;
-	schemaContext?: StoryblokPromptSchemaContext;
+	schemaContext: StoryblokPromptSchemaContext;
 }): Promise<Record<string, unknown>> => {
 	const apiKey = process.env.OPENAI_API_KEY;
 	if (!apiKey) {
 		throw new Error('OPENAI_API_KEY is not configured.');
 	}
 
+	const client = new OpenAI({
+		apiKey,
+		timeout: OPENAI_TIMEOUT_MS,
+		maxRetries: OPENAI_MAX_RETRIES,
+	});
+
 	const model = process.env.OPENAI_MODEL || 'gpt-4.1-mini';
 	const mimeType = params.image.mimetype || 'image/png';
 	const imageBuffer = await readFile(params.image.filepath);
 	const imageDataUrl = `data:${mimeType};base64,${imageBuffer.toString('base64')}`;
-	const payload = {
-		model,
-		temperature: 0.2,
-		response_format: { type: 'json_object' },
-		messages: [
-			{
-				role: 'system',
-				content: buildSystemPrompt(params.schemaContext),
-			},
-			{
-				role: 'user',
-				content: [
-					{
-						type: 'text',
-						text: [
-							'Use the screenshot and user prompt to generate Storyblok content JSON.',
-							buildUserComponentHint(params.schemaContext),
-							'Never include folder placement metadata in output.',
-							`User prompt: ${params.prompt}`,
-						].join('\n'),
-					},
-					{
-						type: 'image_url',
-						image_url: {
-							url: imageDataUrl,
+
+	let content: string | null | undefined;
+	try {
+		const completion = await client.chat.completions.create({
+			model,
+			temperature: 0.2,
+			response_format: { type: 'json_object' },
+			messages: [
+				{
+					role: 'system',
+					content: buildSystemPrompt(params.schemaContext),
+				},
+				{
+					role: 'user',
+					content: [
+						{
+							type: 'text',
+							text: [
+								'Use the screenshot and user prompt to generate Storyblok content JSON.',
+								buildUserComponentHint(params.schemaContext),
+								'Never include folder placement metadata in output.',
+								`User prompt: ${params.prompt}`,
+							].join('\n'),
 						},
-					},
-				],
-			},
-		],
-	};
+						{
+							type: 'image_url',
+							image_url: {
+								url: imageDataUrl,
+							},
+						},
+					],
+				},
+			],
+		});
 
-	const response = await postOpenAiWithRetry({
-		apiKey,
-		body: payload,
-	});
-	const json = (await response.json()) as OpenAIChatResponse;
-
-	if (!response.ok) {
-		throw new Error(json.error?.message || `OpenAI request failed (${response.status}).`);
+		content = completion.choices?.[0]?.message?.content;
+	} catch (error) {
+		const message = error instanceof Error ? error.message : 'OpenAI request failed.';
+		throw new Error(message);
 	}
 
-	const content = json.choices?.[0]?.message?.content;
 	if (!content || typeof content !== 'string') {
 		throw new Error('OpenAI did not return content JSON.');
 	}
@@ -115,7 +106,7 @@ const unwrapJsonCodeFence = (value: string) => {
 	return withoutStart.join('\n').trim();
 };
 
-const buildSystemPrompt = (schemaContext?: StoryblokPromptSchemaContext) => {
+const buildSystemPrompt = (schemaContext: StoryblokPromptSchemaContext) => {
 	const baseRules = [
 		'You generate Storyblok story content JSON.',
 		'Output a single JSON object only. No markdown and no explanations.',
@@ -123,117 +114,27 @@ const buildSystemPrompt = (schemaContext?: StoryblokPromptSchemaContext) => {
 		'Every block must include component and _uid.',
 	];
 
-	if (!schemaContext || schemaContext.components.length === 0) {
-		return [
-			...baseRules,
-		'Allowed components: page, grid, accordion, accordionItem, teaser, feature.',
-		'Accordion rules: accordionItem is required, must be an array, and each item must be component accordionItem.',
-		'page.body and grid.columns may contain arrays of allowed components.',
-		'Field types: teaser.headline string, feature.name string, accordionItem.titel string.',
-		'accordionItem.content, when provided, must be Storyblok richtext JSON object with type/content nodes.',
-		].join('\n');
-	}
-
 	const rootComponent = schemaContext.rootComponents.includes('page')
 		? 'page'
 		: schemaContext.rootComponents[0] || 'page';
 
-	const schemaLines = schemaContext.components.map((component) => {
-		const fieldSummary =
-			component.fields.length === 0
-				? 'no fields'
-				: component.fields
-						.map((field) => {
-							const tokens = [field.name, `(${field.type}${field.required ? ', required' : ''})`];
-							if (field.options && field.options.length > 0) {
-								tokens.push(`options: ${field.options.join('|')}`);
-							}
-							if (field.allowedComponents && field.allowedComponents.length > 0) {
-								tokens.push(`children: ${field.allowedComponents.join('|')}`);
-							}
-							if (typeof field.minimum === 'number') {
-								tokens.push(`min: ${field.minimum}`);
-							}
-							if (typeof field.maximum === 'number') {
-								tokens.push(`max: ${field.maximum}`);
-							}
-							return tokens.join(' ');
-						})
-						.join('; ');
-
-		return `${component.name}${component.isRoot ? ' (root)' : ''}: ${fieldSummary}`;
-	});
+	const typeSection = [
+		'Storyblok TypeScript Definitions (source of truth for field and nested component constraints):',
+		schemaContext.storyblokTypes,
+	].join('\n');
 
 	return [
 		...baseRules,
 		`Root component must be ${rootComponent}.`,
 		`Allowed components: ${schemaContext.allowedComponents.join(', ')}.`,
-		'Schema summary follows. Respect field types, required flags, options, and allowed nested components:',
-		...schemaLines,
+		'Use the full Storyblok component payload and type definitions below as the authoritative schema.',
+		'Components JSON (full payload):',
+		schemaContext.rawComponentsJson,
+		typeSection,
 		'For any richtext field, output a valid Storyblok richtext JSON object with type/content nodes.',
-	].join('\n');
+	].join('\n\n');
 };
 
-const buildUserComponentHint = (schemaContext?: StoryblokPromptSchemaContext) => {
-	if (!schemaContext || schemaContext.allowedComponents.length === 0) {
-		return 'Include only these components: page, grid, accordion, accordionItem, teaser, feature.';
-	}
-
+const buildUserComponentHint = (schemaContext: StoryblokPromptSchemaContext) => {
 	return `Include only these components: ${schemaContext.allowedComponents.join(', ')}.`;
-};
-
-const postOpenAiWithRetry = async (params: {
-	apiKey: string;
-	body: Record<string, unknown>;
-}): Promise<Response> => {
-	let lastError: unknown;
-
-	for (let attempt = 0; attempt <= OPENAI_MAX_RETRIES; attempt += 1) {
-		const controller = new AbortController();
-		const timeout = setTimeout(() => controller.abort(), OPENAI_TIMEOUT_MS);
-
-		try {
-			const response = await fetch(OPENAI_API_URL, {
-				method: 'POST',
-				headers: {
-					Authorization: `Bearer ${params.apiKey}`,
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify(params.body),
-				signal: controller.signal,
-			});
-
-			if (!isRetryableStatus(response.status) || attempt === OPENAI_MAX_RETRIES) {
-				return response;
-			}
-
-			await wait(backoffDelayMs(attempt));
-		} catch (error) {
-			lastError = error;
-			if (attempt === OPENAI_MAX_RETRIES) {
-				break;
-			}
-			await wait(backoffDelayMs(attempt));
-		} finally {
-			clearTimeout(timeout);
-		}
-	}
-
-	if (lastError instanceof Error && lastError.name === 'AbortError') {
-		throw new Error('OpenAI request timed out.');
-	}
-
-	throw new Error('OpenAI request failed after retries.');
-};
-
-const isRetryableStatus = (status: number) => {
-	return status === 408 || status === 409 || status === 429 || status >= 500;
-};
-
-const backoffDelayMs = (attempt: number) => {
-	return 300 * 2 ** attempt;
-};
-
-const wait = async (ms: number) => {
-	await new Promise((resolve) => setTimeout(resolve, ms));
 };

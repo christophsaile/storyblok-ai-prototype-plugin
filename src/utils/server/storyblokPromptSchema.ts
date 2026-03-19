@@ -37,12 +37,25 @@ export type StoryblokPromptSchemaContext = {
 	components: PromptSchemaComponent[];
 	allowedComponents: string[];
 	rootComponents: string[];
+	rawComponentsJson: string;
+	storyblokTypes: string;
 };
 
 export const toPromptSchemaContext = (
 	input: unknown,
+	options: { storyblokTypes: string },
 ): StoryblokPromptSchemaContext | null => {
 	if (!isPlainObject(input) || !Array.isArray(input.components)) {
+		return null;
+	}
+
+	const storyblokTypes = normalizeStoryblokTypes(options.storyblokTypes);
+	if (!storyblokTypes) {
+		return null;
+	}
+
+	const rawComponentsJson = JSON.stringify(input.components, null, 2);
+	if (!rawComponentsJson || rawComponentsJson === '[]') {
 		return null;
 	}
 
@@ -64,7 +77,18 @@ export const toPromptSchemaContext = (
 		components,
 		allowedComponents,
 		rootComponents,
+		rawComponentsJson,
+		storyblokTypes,
 	};
+};
+
+const normalizeStoryblokTypes = (value?: string) => {
+	if (typeof value !== 'string') {
+		return undefined;
+	}
+
+	const trimmed = value.trim();
+	return trimmed.length > 0 ? trimmed : undefined;
 };
 
 const normalizeComponent = (input: StoryblokComponent): PromptSchemaComponent | null => {
