@@ -159,6 +159,7 @@ const buildSystemPrompt = (schemaContext: StoryblokPromptSchemaContext) => {
 		'You generate Storyblok story content JSON.',
 		'Output a single JSON object only. No markdown and no explanations.',
 		'The root object must be a page component.',
+		"If your content is mainly text, use the card component and fill out the description.",
 		'Every block must include component and _uid.',
 	];
 
