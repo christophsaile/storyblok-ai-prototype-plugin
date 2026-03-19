@@ -12,8 +12,12 @@ import {
 	Typography,
 } from '@mui/material';
 
-const MAX_IMAGE_SIZE_MB = 10;
-const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
+const MAX_UPLOAD_IMAGE_SIZE_MB = 4;
+const MAX_UPLOAD_IMAGE_SIZE_BYTES = MAX_UPLOAD_IMAGE_SIZE_MB * 1024 * 1024;
+const MAX_SOURCE_IMAGE_SIZE_MB = 25;
+const MAX_SOURCE_IMAGE_SIZE_BYTES = MAX_SOURCE_IMAGE_SIZE_MB * 1024 * 1024;
+const MAX_IMAGE_DIMENSION = 2400;
+const JPEG_QUALITIES = [0.9, 0.82, 0.74, 0.66, 0.58, 0.5] as const;
 
 type ValidationErrors = {
 	image?: string;
@@ -57,17 +61,114 @@ type GenerateResponse = {
 const isValidImage = (file: File | null) => {
 	if (!file) return false;
 	if (!file.type.startsWith('image/')) return false;
-	if (file.size > MAX_IMAGE_SIZE_BYTES) return false;
+	if (file.size > MAX_UPLOAD_IMAGE_SIZE_BYTES) return false;
 	return true;
+};
+
+const readImageElement = (file: File): Promise<HTMLImageElement> => {
+	return new Promise((resolve, reject) => {
+		const objectUrl = URL.createObjectURL(file);
+		const img = new Image();
+
+		img.onload = () => {
+			URL.revokeObjectURL(objectUrl);
+			resolve(img);
+		};
+
+		img.onerror = () => {
+			URL.revokeObjectURL(objectUrl);
+			reject(new Error('Image could not be decoded in browser.'));
+		};
+
+		img.src = objectUrl;
+	});
+};
+
+const canvasToBlob = (
+	canvas: HTMLCanvasElement,
+	type: string,
+	quality?: number,
+): Promise<Blob> => {
+	return new Promise((resolve, reject) => {
+		canvas.toBlob(
+			(blob) => {
+				if (!blob) {
+					reject(new Error('Failed to encode image.'));
+					return;
+				}
+				resolve(blob);
+			},
+			type,
+			quality,
+		);
+	});
+};
+
+const buildCompressedFileName = (fileName: string) => {
+	const lastDot = fileName.lastIndexOf('.');
+	const baseName = lastDot > 0 ? fileName.slice(0, lastDot) : fileName;
+	return `${baseName}.jpg`;
+};
+
+const prepareImageForUpload = async (source: File): Promise<File> => {
+	if (!source.type.startsWith('image/')) {
+		throw new Error('Only image files are allowed.');
+	}
+
+	if (source.size <= MAX_UPLOAD_IMAGE_SIZE_BYTES) {
+		return source;
+	}
+
+	const image = await readImageElement(source);
+	const canvas = document.createElement('canvas');
+	const context = canvas.getContext('2d');
+	if (!context) {
+		throw new Error('Could not initialize image canvas.');
+	}
+
+	let width = image.naturalWidth;
+	let height = image.naturalHeight;
+	const initialScale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(width, height));
+	width = Math.max(1, Math.round(width * initialScale));
+	height = Math.max(1, Math.round(height * initialScale));
+
+	for (let round = 0; round < 4; round += 1) {
+		canvas.width = width;
+		canvas.height = height;
+		context.clearRect(0, 0, width, height);
+		context.drawImage(image, 0, 0, width, height);
+
+		for (const quality of JPEG_QUALITIES) {
+			const blob = await canvasToBlob(canvas, 'image/jpeg', quality);
+			if (blob.size <= MAX_UPLOAD_IMAGE_SIZE_BYTES) {
+				return new File([blob], buildCompressedFileName(source.name), {
+					type: 'image/jpeg',
+					lastModified: Date.now(),
+				});
+			}
+		}
+
+		width = Math.max(1, Math.round(width * 0.8));
+		height = Math.max(1, Math.round(height * 0.8));
+	}
+
+	throw new Error(
+		`Image is too large to prepare for upload. Please use an image below ${MAX_SOURCE_IMAGE_SIZE_MB}MB or lower resolution.`,
+	);
 };
 
 export default function StoryGenerationForm() {
 	const [image, setImage] = useState<File | null>(null);
+	const [originalImageMeta, setOriginalImageMeta] = useState<{
+		name: string;
+		size: number;
+	} | null>(null);
 	const [storyName, setStoryName] = useState('');
 	const [prompt, setPrompt] = useState('');
 	const [folder, setFolder] = useState('');
 	const [generatedContentJson, setGeneratedContentJson] = useState('');
 	const [errors, setErrors] = useState<ValidationErrors>({});
+	const [isPreparingImage, setIsPreparingImage] = useState(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [result, setResult] = useState<GenerateResponse | null>(null);
 	const [requestError, setRequestError] = useState<string | null>(null);
@@ -76,11 +177,12 @@ export default function StoryGenerationForm() {
 	const formReady = useMemo(() => {
 		return (
 			Boolean(image) &&
+			!isPreparingImage &&
 			storyName.trim().length > 0 &&
 			prompt.trim().length > 0 &&
 			folder.trim().length > 0
 		);
-	}, [image, storyName, prompt, folder]);
+	}, [image, isPreparingImage, storyName, prompt, folder]);
 
 	const validate = (): ValidationErrors => {
 		const nextErrors: ValidationErrors = {};
@@ -89,8 +191,8 @@ export default function StoryGenerationForm() {
 			nextErrors.image = 'Please upload a screenshot image.';
 		} else if (!image.type.startsWith('image/')) {
 			nextErrors.image = 'Only image files are allowed.';
-		} else if (image.size > MAX_IMAGE_SIZE_BYTES) {
-			nextErrors.image = `Image is too large. Max size is ${MAX_IMAGE_SIZE_MB} MB.`;
+		} else if (image.size > MAX_UPLOAD_IMAGE_SIZE_BYTES) {
+			nextErrors.image = `Image is too large. Max upload size is ${MAX_UPLOAD_IMAGE_SIZE_MB} MB.`;
 		}
 
 		if (!prompt.trim()) {
@@ -141,6 +243,22 @@ export default function StoryGenerationForm() {
 				body: data,
 			});
 
+			const contentType = response.headers.get('content-type') || '';
+			if (!contentType.includes('application/json')) {
+				if (response.status === 413) {
+					setRequestError(
+						'Uploaded image is too large for the deployed API. Please use an image smaller than 4MB.',
+					);
+					return;
+				}
+
+				const fallbackText = await response.text();
+				setRequestError(
+					fallbackText || `Generation request failed with status ${response.status}.`,
+				);
+				return;
+			}
+
 			const json = (await response.json()) as GenerateResponse;
 			setResponseMeta(
 				json.requestId
@@ -162,6 +280,53 @@ export default function StoryGenerationForm() {
 			setRequestError('Unexpected error while submitting generation request.');
 		} finally {
 			setIsSubmitting(false);
+		}
+	};
+
+	const onImageChange = async (selectedFile: File | null) => {
+		setErrors((prev) => ({ ...prev, image: undefined }));
+
+		if (!selectedFile) {
+			setImage(null);
+			setOriginalImageMeta(null);
+			return;
+		}
+
+		if (!selectedFile.type.startsWith('image/')) {
+			setImage(null);
+			setOriginalImageMeta(null);
+			setErrors((prev) => ({ ...prev, image: 'Only image files are allowed.' }));
+			return;
+		}
+
+		if (selectedFile.size > MAX_SOURCE_IMAGE_SIZE_BYTES) {
+			setImage(null);
+			setOriginalImageMeta(null);
+			setErrors((prev) => ({
+				...prev,
+				image: `Source image is too large. Max source size is ${MAX_SOURCE_IMAGE_SIZE_MB} MB.`,
+			}));
+			return;
+		}
+
+		setIsPreparingImage(true);
+		try {
+			const prepared = await prepareImageForUpload(selectedFile);
+			setImage(prepared);
+			setOriginalImageMeta({
+				name: selectedFile.name,
+				size: selectedFile.size,
+			});
+		} catch (error) {
+			setImage(null);
+			setOriginalImageMeta(null);
+			setErrors((prev) => ({
+				...prev,
+				image:
+					error instanceof Error ? error.message : 'Image could not be prepared for upload.',
+			}));
+		} finally {
+			setIsPreparingImage(false);
 		}
 	};
 
@@ -208,11 +373,15 @@ export default function StoryGenerationForm() {
 										type="file"
 										accept="image/*"
 										onChange={(event) => {
-											setImage(event.target.files?.[0] || null);
-											setErrors((prev) => ({ ...prev, image: undefined }));
+											void onImageChange(event.target.files?.[0] || null);
 										}}
 									/>
 								</Button>
+								{isPreparingImage && (
+									<Typography variant="body2" color="text.secondary" mt={1}>
+										Preparing image for upload...
+									</Typography>
+								)}
 								{errors.image && (
 									<Typography color="error" variant="body2" mt={1}>
 										{errors.image}
@@ -220,7 +389,10 @@ export default function StoryGenerationForm() {
 								)}
 								{image && isValidImage(image) && (
 									<Typography variant="body2" color="text.secondary" mt={1}>
-										Selected: {image.name} ({Math.round(image.size / 1024)} KB)
+										Upload file: {image.name} ({Math.round(image.size / 1024)} KB)
+										{originalImageMeta && originalImageMeta.size !== image.size
+											? ` (compressed from ${Math.round(originalImageMeta.size / 1024)} KB)`
+											: ''}
 									</Typography>
 								)}
 							</Box>
@@ -272,7 +444,7 @@ export default function StoryGenerationForm() {
 								type="submit"
 								variant="contained"
 								disableElevation
-								disabled={!formReady || isSubmitting}
+								disabled={!formReady || isSubmitting || isPreparingImage}
 							>
 								{isSubmitting ? 'Generating...' : 'Generate Story'}
 							</Button>

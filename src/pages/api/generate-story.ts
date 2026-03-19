@@ -1,10 +1,10 @@
 import {
-    generateStoryContentFromImage,
-    getAppSession,
-    StoryblokPromptSchemaContext,
-    toPromptSchemaContext,
-    validateGeneratedStoryContent,
-    verifyAppBridgeHeader,
+	generateStoryContentFromImage,
+	getAppSession,
+	StoryblokPromptSchemaContext,
+	toPromptSchemaContext,
+	validateGeneratedStoryContent,
+	verifyAppBridgeHeader,
 } from '@/utils/server';
 import formidable, { Fields, File, Files } from 'formidable';
 import type { NextApiRequest, NextApiResponse } from 'next';
@@ -62,7 +62,7 @@ type GenerateErrorResponse = {
 	}[];
 };
 
-const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_IMAGE_SIZE_BYTES = 4 * 1024 * 1024;
 const STORYBLOK_TIMEOUT_MS = 12000;
 const STORYBLOK_MAX_RETRIES = 2;
 const SCHEMA_SNAPSHOT_DIR = path.resolve(
@@ -156,7 +156,7 @@ export default async function handler(
 			ok: false,
 			requestId,
 			code: 'validation_error',
-			error: 'Image exceeds 10MB limit.',
+			error: 'Image exceeds 4MB limit.',
 		});
 	}
 
