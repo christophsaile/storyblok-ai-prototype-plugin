@@ -7,12 +7,29 @@ const OPENAI_TIMEOUT_MS = parsePositiveInt(process.env.OPENAI_TIMEOUT_MS, 90000)
 const OPENAI_MAX_RETRIES = parsePositiveInt(process.env.OPENAI_MAX_RETRIES, 2);
 const OPENAI_MAX_COMPLETION_TOKENS = parsePositiveInt(
 	process.env.OPENAI_MAX_COMPLETION_TOKENS,
-	2200,
+	4000,
 );
+const OPENAI_DEBUG_LOGS_ENABLED =
+	process.env.OPENAI_DEBUG_LOGS === '1' || process.env.OPENAI_DEBUG_LOGS === 'true';
+type OpenAIChatCreateParams = OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming;
+type OpenAIChatCompletion = OpenAI.Chat.Completions.ChatCompletion;
+
+const STRICT_OBJECT_RESPONSE_FORMAT = {
+	type: 'json_schema',
+	json_schema: {
+		name: 'storyblok_content_object',
+		strict: true,
+		schema: {
+			type: 'object',
+			additionalProperties: true,
+		},
+	},
+} as const;
 
 export const generateStoryContentFromImage = async (params: {
 	image: File;
 	prompt: string;
+	requestId: string;
 	schemaContext: StoryblokPromptSchemaContext;
 }): Promise<Record<string, unknown>> => {
 	const apiKey = process.env.OPENAI_API_KEY;
@@ -33,11 +50,10 @@ export const generateStoryContentFromImage = async (params: {
 
 	let content: string | null | undefined;
 	try {
-		const completion = await client.chat.completions.create({
+		const completionBaseParams: OpenAIChatCreateParams = {
 			model,
 			temperature: 0.2,
 			max_completion_tokens: OPENAI_MAX_COMPLETION_TOKENS,
-			response_format: { type: 'json_object' },
 			messages: [
 				{
 					role: 'system',
@@ -64,6 +80,12 @@ export const generateStoryContentFromImage = async (params: {
 					],
 				},
 			],
+		};
+
+		const completion = await createStructuredCompletionWithFallback({
+			client,
+			requestId: params.requestId,
+			baseParams: completionBaseParams,
 		});
 
 		content = completion.choices?.[0]?.message?.content;
@@ -81,20 +103,36 @@ export const generateStoryContentFromImage = async (params: {
 		throw new Error('OpenAI did not return content JSON.');
 	}
 
+	logOpenAiDebug(params.requestId, 'Model completion received.', {
+		model,
+		contentLength: content.length,
+		contentPreviewStart: sanitizePreview(content.slice(0, 300)),
+		contentPreviewEnd: sanitizePreview(content.slice(-180)),
+	});
+
 	const cleaned = unwrapJsonCodeFence(content);
+
+	let parsed: unknown;
 	try {
-		const parsed = JSON.parse(cleaned) as unknown;
-		if (
-			typeof parsed !== 'object' ||
-			parsed === null ||
-			Array.isArray(parsed)
-		) {
-			throw new Error('Generated content is not an object.');
-		}
-		return parsed as Record<string, unknown>;
+		parsed = JSON.parse(cleaned) as unknown;
 	} catch {
-		throw new Error('OpenAI returned invalid JSON content.');
+		logOpenAiDebug(params.requestId, 'JSON parse failed for model completion.', {
+			cleanedLength: cleaned.length,
+			cleanedPreviewStart: sanitizePreview(cleaned.slice(0, 300)),
+			cleanedPreviewEnd: sanitizePreview(cleaned.slice(-180)),
+			suspectedReason: detectLikelyJsonFailureReason(cleaned),
+		});
+		throw new Error('OpenAI returned invalid JSON content (parse failure).');
 	}
+
+	if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+		logOpenAiDebug(params.requestId, 'Model returned JSON with invalid root type.', {
+			rootType: Array.isArray(parsed) ? 'array' : typeof parsed,
+		});
+		throw new Error('OpenAI returned invalid JSON content (root must be an object).');
+	}
+
+	return parsed as Record<string, unknown>;
 };
 
 const unwrapJsonCodeFence = (value: string) => {
@@ -147,6 +185,77 @@ const buildSystemPrompt = (schemaContext: StoryblokPromptSchemaContext) => {
 
 const buildUserComponentHint = (schemaContext: StoryblokPromptSchemaContext) => {
 	return `Include only these components: ${schemaContext.allowedComponents.join(', ')}.`;
+};
+
+const createStructuredCompletionWithFallback = async (params: {
+	client: OpenAI;
+	requestId: string;
+	baseParams: OpenAIChatCreateParams;
+}): Promise<OpenAIChatCompletion> => {
+	try {
+		return await params.client.chat.completions.create({
+			...params.baseParams,
+			response_format: STRICT_OBJECT_RESPONSE_FORMAT as never,
+		});
+	} catch (error) {
+		if (!shouldFallbackToJsonObject(error)) {
+			throw error;
+		}
+
+		logOpenAiDebug(
+			params.requestId,
+			'Strict structured output rejected by model/API. Falling back to json_object response format.',
+			{ message: error instanceof Error ? error.message : 'unknown' },
+		);
+
+		return await params.client.chat.completions.create({
+			...params.baseParams,
+			response_format: { type: 'json_object' },
+		});
+	}
+};
+
+const shouldFallbackToJsonObject = (error: unknown) => {
+	if (!(error instanceof Error)) {
+		return false;
+	}
+
+	const msg = error.message.toLowerCase();
+	return msg.includes('json_schema') || msg.includes('response_format') || msg.includes('strict');
+};
+
+const logOpenAiDebug = (requestId: string, message: string, data?: Record<string, unknown>) => {
+	if (!OPENAI_DEBUG_LOGS_ENABLED) {
+		return;
+	}
+
+	if (data) {
+		console.info(`[generate-story:${requestId}] ${message}`, data);
+		return;
+	}
+
+	console.info(`[generate-story:${requestId}] ${message}`);
+};
+
+const sanitizePreview = (value: string) => {
+	return value.replace(/\s+/g, ' ').trim();
+};
+
+const detectLikelyJsonFailureReason = (value: string) => {
+	const trimmed = value.trim();
+	if (!trimmed) {
+		return 'empty-content';
+	}
+
+	if (!trimmed.endsWith('}') && !trimmed.endsWith(']')) {
+		return 'possibly-truncated';
+	}
+
+	if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) {
+		return 'non-json-prefix';
+	}
+
+	return 'malformed-json';
 };
 
 function parsePositiveInt(value: string | undefined, fallback: number) {

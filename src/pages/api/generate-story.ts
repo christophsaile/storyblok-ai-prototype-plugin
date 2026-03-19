@@ -214,6 +214,7 @@ export default async function handler(
 	}
 
 	const candidateContent = await parseCandidateContent({
+		requestId,
 		generatedContentJson,
 		prompt,
 		image,
@@ -554,6 +555,7 @@ const buildStoryEditorUrl = (spaceId: number, storyId: number) => {
 };
 
 const parseCandidateContent = async (params: {
+	requestId: string;
 	generatedContentJson: string;
 	prompt: string;
 	image: File;
@@ -588,6 +590,7 @@ const parseCandidateContent = async (params: {
 
 	try {
 		const generated = await generateStoryContentFromImage({
+			requestId: params.requestId,
 			image: params.image,
 			prompt: params.prompt,
 			schemaContext: params.schemaContext,
