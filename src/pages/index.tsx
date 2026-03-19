@@ -1,7 +1,5 @@
 import Head from 'next/head';
 import { useAppBridge } from '@/hooks';
-import UserInfo from '@/components/UserInfo';
-import Example from '@/components/Example';
 import StoryGenerationForm from '@/components/StoryGenerationForm';
 import { AppLayout, StoryblokIcon } from '@storyblok/mui';
 import { Stack, Typography } from '@mui/material';
@@ -28,8 +26,6 @@ export default function Home() {
 								Authenticated
 							</Typography>
 						<StoryGenerationForm />
-						<UserInfo />
-						<Example />
 						</Stack>
 					</AppLayout>
 				)}

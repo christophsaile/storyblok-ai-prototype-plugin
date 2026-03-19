@@ -1,16 +1,16 @@
 import { APP_BRIDGE_TOKEN_HEADER_KEY, KEY_TOKEN } from '@/utils/const';
 import { FormEvent, useMemo, useState } from 'react';
 import {
-	Alert,
-	Box,
-	Button,
-	Card,
-	CardContent,
-	CircularProgress,
-	Divider,
-	Stack,
-	TextField,
-	Typography,
+    Alert,
+    Box,
+    Button,
+    Card,
+    CardContent,
+    CircularProgress,
+    Divider,
+    Stack,
+    TextField,
+    Typography,
 } from '@mui/material';
 
 const MAX_UPLOAD_IMAGE_SIZE_MB = 4;
@@ -167,7 +167,6 @@ export default function StoryGenerationForm() {
 	const [storyName, setStoryName] = useState('');
 	const [prompt, setPrompt] = useState('');
 	const [folder, setFolder] = useState('');
-	const [generatedContentJson, setGeneratedContentJson] = useState('');
 	const [errors, setErrors] = useState<ValidationErrors>({});
 	const [isPreparingImage, setIsPreparingImage] = useState(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
@@ -231,9 +230,6 @@ export default function StoryGenerationForm() {
 			data.append('storyName', storyName.trim());
 			data.append('prompt', prompt.trim());
 			data.append('targetFolder', folder.trim());
-			if (generatedContentJson.trim()) {
-				data.append('generatedContentJson', generatedContentJson.trim());
-			}
 
 			const response = await fetch('/api/generate-story', {
 				method: 'POST',
@@ -426,19 +422,6 @@ export default function StoryGenerationForm() {
 								error={Boolean(errors.folder)}
 								helperText={errors.folder}
 								fullWidth
-							/>
-
-							<TextField
-								id="generatedContentJson"
-								label="Generated Content JSON (optional debug override)"
-								placeholder="Leave empty to use OpenAI. If set, this JSON is validated directly."
-								value={generatedContentJson}
-								onChange={(event) => {
-									setGeneratedContentJson(event.target.value);
-								}}
-								fullWidth
-								multiline
-								minRows={8}
 							/>
 
 							<Button
