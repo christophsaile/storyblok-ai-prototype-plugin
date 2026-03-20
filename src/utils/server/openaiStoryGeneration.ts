@@ -5,10 +5,7 @@ import { StoryblokPromptSchemaContext } from './storyblokPromptSchema';
 
 const OPENAI_TIMEOUT_MS = parsePositiveInt(process.env.OPENAI_TIMEOUT_MS, 90000);
 const OPENAI_MAX_RETRIES = parsePositiveInt(process.env.OPENAI_MAX_RETRIES, 2);
-const OPENAI_MAX_COMPLETION_TOKENS = parsePositiveInt(
-	process.env.OPENAI_MAX_COMPLETION_TOKENS,
-	4000,
-);
+const OPENAI_MAX_COMPLETION_TOKENS = 12000
 const OPENAI_DEBUG_LOGS_ENABLED =
 	process.env.OPENAI_DEBUG_LOGS === '1' || process.env.OPENAI_DEBUG_LOGS === 'true';
 type OpenAIChatCreateParams = OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming;
@@ -43,7 +40,7 @@ export const generateStoryContentFromImage = async (params: {
 		maxRetries: OPENAI_MAX_RETRIES,
 	});
 
-	const model = process.env.OPENAI_MODEL || 'gpt-4.1-mini';
+	const model = "gpt-5";
 	const mimeType = params.image.mimetype || 'image/png';
 	const imageBuffer = await readFile(params.image.filepath);
 	const imageDataUrl = `data:${mimeType};base64,${imageBuffer.toString('base64')}`;
