@@ -71,6 +71,7 @@ export const generateStoryContentFromImage = async (params: {
 							type: 'image_url',
 							image_url: {
 								url: imageDataUrl,
+								detail: 'high',
 							},
 						},
 					],
