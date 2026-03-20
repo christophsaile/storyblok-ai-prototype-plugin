@@ -155,6 +155,7 @@ const unwrapJsonCodeFence = (value: string) => {
 };
 
 const buildSystemPrompt = (schemaContext: StoryblokPromptSchemaContext) => {
+	const includeRichTextGuidance = hasRichTextFields(schemaContext);
 	const baseRules = [
 		'You generate Storyblok story content JSON.',
 		'Output a single JSON object only. No markdown and no explanations.',
@@ -162,6 +163,7 @@ const buildSystemPrompt = (schemaContext: StoryblokPromptSchemaContext) => {
 		"For Links and Assets, use the structure defined in the Storyblok TypeScript definitions provided below, including all required fields. The values can be placeholders, but the structure must be correct.",
 		"If an Assets is not required, leave it out. Do not include empty or placeholder Assets.",
 		'Every block must include component and _uid.',
+		'Do not include Storyblok editor metadata fields such as _editable.',
 	];
 
 	const rootComponent = schemaContext.rootComponents.includes('page')
@@ -173,7 +175,7 @@ const buildSystemPrompt = (schemaContext: StoryblokPromptSchemaContext) => {
 		schemaContext.storyblokTypes,
 	].join('\n');
 
-	return [
+	const sections = [
 		...baseRules,
 		`Root component must be ${rootComponent}.`,
 		`Allowed components: ${schemaContext.allowedComponents.join(', ')}.`,
@@ -181,8 +183,78 @@ const buildSystemPrompt = (schemaContext: StoryblokPromptSchemaContext) => {
 		'Components JSON (full payload):',
 		schemaContext.rawComponentsJson,
 		typeSection,
-		'For any richtext field, output a valid Storyblok richtext JSON object with type/content nodes.',
-	].join('\n\n');
+	];
+
+	if (includeRichTextGuidance) {
+		sections.push(
+			'For any richtext field, output a valid Storyblok richtext JSON object with type/content nodes.',
+			'Use this compact richtext shape as a structure reference (example only):',
+			buildRichTextExample(),
+		);
+	}
+
+	return sections.join('\n\n');
+};
+
+const hasRichTextFields = (schemaContext: StoryblokPromptSchemaContext) => {
+	return schemaContext.components.some((component) =>
+		component.fields.some((field) => field.type === 'richtext'),
+	);
+};
+
+const buildRichTextExample = () => {
+	return JSON.stringify(
+		{
+			type: 'doc',
+			content: [
+				{
+					type: 'heading',
+					attrs: { level: 2, textAlign: null },
+					content: [{ type: 'text', text: 'Sample heading' }],
+				},
+				{
+					type: 'paragraph',
+					attrs: { textAlign: null },
+					content: [
+						{ type: 'text', text: 'Intro with an ' },
+						{
+							type: 'text',
+							text: 'external link',
+							marks: [
+								{
+									type: 'link',
+									attrs: {
+										href: 'https://example.com',
+										uuid: null,
+										anchor: null,
+										target: '_blank',
+										linktype: 'url',
+									},
+								},
+							],
+						},
+					],
+				},
+				{
+					type: 'bullet_list',
+					content: [
+						{
+							type: 'list_item',
+							content: [
+								{
+									type: 'paragraph',
+									attrs: { textAlign: null },
+									content: [{ type: 'text', text: 'List item' }],
+								},
+							],
+						},
+					],
+				},
+			],
+		},
+		null,
+		2,
+	);
 };
 
 const buildUserComponentHint = (schemaContext: StoryblokPromptSchemaContext) => {
