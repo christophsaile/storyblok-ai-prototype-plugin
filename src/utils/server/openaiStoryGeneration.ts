@@ -5,7 +5,7 @@ import { StoryblokPromptSchemaContext } from './storyblokPromptSchema';
 
 const OPENAI_TIMEOUT_MS = 180000;
 const OPENAI_MAX_RETRIES = 2;
-const OPENAI_MAX_COMPLETION_TOKENS = 24000;
+const OPENAI_MAX_COMPLETION_TOKENS = 100000;
 const OPENAI_MODEL = 'gpt-5';
 const OPENAI_DEBUG_LOGS_ENABLED = false;
 type OpenAIChatCreateParams = OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming;
