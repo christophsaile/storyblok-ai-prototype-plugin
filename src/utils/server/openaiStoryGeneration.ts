@@ -3,11 +3,11 @@ import { readFile } from 'node:fs/promises';
 import OpenAI from 'openai';
 import { StoryblokPromptSchemaContext } from './storyblokPromptSchema';
 
-const OPENAI_TIMEOUT_MS = parsePositiveInt(process.env.OPENAI_TIMEOUT_MS, 90000);
-const OPENAI_MAX_RETRIES = parsePositiveInt(process.env.OPENAI_MAX_RETRIES, 2);
-const OPENAI_MAX_COMPLETION_TOKENS = 12000
-const OPENAI_DEBUG_LOGS_ENABLED =
-	process.env.OPENAI_DEBUG_LOGS === '1' || process.env.OPENAI_DEBUG_LOGS === 'true';
+const OPENAI_TIMEOUT_MS = 180000;
+const OPENAI_MAX_RETRIES = 2;
+const OPENAI_MAX_COMPLETION_TOKENS = 24000;
+const OPENAI_MODEL = 'gpt-5';
+const OPENAI_DEBUG_LOGS_ENABLED = false;
 type OpenAIChatCreateParams = OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming;
 type OpenAIChatCompletion = OpenAI.Chat.Completions.ChatCompletion;
 
@@ -40,7 +40,7 @@ export const generateStoryContentFromImage = async (params: {
 		maxRetries: OPENAI_MAX_RETRIES,
 	});
 
-	const model = "gpt-5";
+	const model = OPENAI_MODEL;
 	const mimeType = params.image.mimetype || 'image/png';
 	const imageBuffer = await readFile(params.image.filepath);
 	const imageDataUrl = `data:${mimeType};base64,${imageBuffer.toString('base64')}`;
@@ -88,7 +88,7 @@ export const generateStoryContentFromImage = async (params: {
 	} catch (error) {
 		if (error instanceof Error && /timed out/i.test(error.message)) {
 			throw new Error(
-				`Request timed out after ${Math.round(OPENAI_TIMEOUT_MS / 1000)}s. Try a smaller image or increase OPENAI_TIMEOUT_MS.`,
+				`Request timed out after ${Math.round(OPENAI_TIMEOUT_MS / 1000)}s. Try a smaller image.`,
 			);
 		}
 		const message = error instanceof Error ? error.message : 'OpenAI request failed.';
@@ -328,16 +328,3 @@ const detectLikelyJsonFailureReason = (value: string) => {
 
 	return 'malformed-json';
 };
-
-function parsePositiveInt(value: string | undefined, fallback: number) {
-	if (!value) {
-		return fallback;
-	}
-
-	const parsed = Number.parseInt(value, 10);
-	if (Number.isFinite(parsed) && parsed > 0) {
-		return parsed;
-	}
-
-	return fallback;
-}

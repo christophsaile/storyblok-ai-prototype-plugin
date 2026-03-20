@@ -155,3 +155,7 @@ If you have trouble setting up the development environment, please review the fo
 <img src="./docs/app-bridge.png" alt="App Bridge" width="600" />
 
 5. Ensure that the ad-blocker browser extensions are disabled when developing the extension.
+
+6. If story generation fails with `Request timed out after 90s` (or similar):
+	- Try a smaller screenshot upload.
+	- If needed, adjust hardcoded OpenAI settings in `src/utils/server/openaiStoryGeneration.ts`.
