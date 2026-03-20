@@ -163,7 +163,7 @@ const buildSystemPrompt = (schemaContext: StoryblokPromptSchemaContext) => {
 		"Please fill out all required fields for each component, but you can omit optional fields if you don't have a good value to put there.",
 		'Every block must include component and _uid.',
 		'Do not include Storyblok editor metadata fields such as _editable.',
-		'For any image filename or placeholder used with next/image, do not output relative paths like "design-dev.jpg". Use either an absolute URL (http:// or https://) or a root-relative path that starts with "/" (for example "/design-dev.jpg").',
+		'For any image filename or placeholder used with next/image, do not output relative paths like "design-dev.jpg". Use a root-relative path that starts with "/" (for example "/design-dev.jpg").',
 	];
 
 	const rootComponent = schemaContext.rootComponents.includes('page')
