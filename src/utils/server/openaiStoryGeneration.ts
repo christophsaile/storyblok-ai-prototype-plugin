@@ -49,7 +49,6 @@ export const generateStoryContentFromImage = async (params: {
 	try {
 		const completionBaseParams: OpenAIChatCreateParams = {
 			model,
-			temperature: 0.2,
 			max_completion_tokens: OPENAI_MAX_COMPLETION_TOKENS,
 			messages: [
 				{
