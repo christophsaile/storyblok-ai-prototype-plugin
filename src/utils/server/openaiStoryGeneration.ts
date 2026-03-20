@@ -164,6 +164,7 @@ const buildSystemPrompt = (schemaContext: StoryblokPromptSchemaContext) => {
 		'Every block must include component and _uid.',
 		'Do not include Storyblok editor metadata fields such as _editable.',
 		'For any image filename or placeholder used with next/image, do not output relative paths like "design-dev.jpg". Use a root-relative path that starts with "/" (for example "/design-dev.jpg").',
+		'For images left or right aligned to text, consider using the hero component.',
 	];
 
 	const rootComponent = schemaContext.rootComponents.includes('page')
